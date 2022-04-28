@@ -2,9 +2,19 @@
     background: black;
     /* background-image: url("outrunBackground.gif"); */
 }
-dialog{
+#centeredDiv{
+    margin: auto;
     width: 75%;
     height: 75%;
+}
+dialog{
     background: white;
-    margin: auto, auto;
+    width: inherit;
+    height: 65%;
+}
+#nextButton{
+    position: fixed;
+    display: inline;
+    bottom: 0;
+    left: inherit;
 }

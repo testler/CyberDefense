@@ -17,9 +17,17 @@ class GameSesion{
 
     }
     gameStart(){
+        let introText = "To be written text";
         let introBox = document.createElement("dialog");
-        document.createTextNode("This is new.");
-        // introBox.outerHTML ="<dialog open>test</dialog>";
+        let nextButton = document.createElement("button");
+        nextButton.id = "nextButton";
+        introBox.appendChild(document.createTextNode(introText));
+        nextButton.appendChild(document.createTextNode("NEXT >"));
+        document.querySelector("#centeredDiv").appendChild(introBox);
+        document.querySelector("#centeredDiv").appendChild(nextButton);
+        introBox.open = true;
+        
+
         console.log("getting here");
 
     }
