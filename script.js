@@ -13,15 +13,20 @@ class GameSesion{
     constructor(){
         this.username = "";
         this.levelWins = [false, false, false, false, false]; //each level is index +1  so level 1 is at index 0
+        this.quadrantArray = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
+        //2D array 15x15
     }
     generateLevel(level){
         let gameBoard = document.createElement("table");
-        let nextButton = document.createElement("button");
-        nextButton.id = "nextButton";
-        introBox.appendChild(document.createTextNode(introText));
-        nextButton.appendChild(document.createTextNode("NEXT >"));
-        document.querySelector("#centeredDiv").appendChild(introBox);
-        document.querySelector("#centeredDiv").appendChild(nextButton);
+        gameBoard.id = "gameBoard";
+        this.quadrantArray.forEach(firstDimensionItem => {
+            firstDimensionItem[i].forEach(secondDimensionItem => {
+                secondDimensionItem = i + (String.fromCharCode(a+97));
+            },a);
+
+        },i)
+        document.querySelector("#centeredDiv").appendChild(gameBoard);
+        console.log("getting here");
     }
     gameStart(){
         let introText = "To be written text";
@@ -34,15 +39,17 @@ class GameSesion{
         document.querySelector("#centeredDiv").appendChild(nextButton);
         introBox.open = true;
         // need to work on css for button location
+        nextButton.addEventListener("click", (e) => this.mainGame());
+        
     }
-    gameLevelsStart(){
+    LevelsStart(){
         if(document.querySelectorAll("#centeredDiv > *").length > 0){
             document.querySelectorAll("#centeredDiv > *").forEach(element => {
                 element.remove();
             });
         }
         this.generateLevel(1);
-        // this.playLevel();
+        // this.startLevel();
         // this.tutorial(); //hopefully will come back to this
 
         if(this.levelWins[0] === true){
@@ -52,10 +59,12 @@ class GameSesion{
         }
     }
     winnerScreen(){
-
+    }
+    mainGame(){
+    this.gameLevelsStart();
     }
 }
 let game1 = new GameSesion();
-game1.gameStart();
-game1.gameLevelsStart();
+// game1.gameStart();
+game1.LevelsStart();
 console.log("script loaded");
