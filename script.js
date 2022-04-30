@@ -17,15 +17,7 @@ class GameSesion{
         //2D array 15x15
     }
     generateLevel(level){
-        let gameBoard = document.createElement("table");
-        gameBoard.id = "gameBoard";
-        this.quadrantArray.forEach(firstDimensionItem => {
-            firstDimensionItem[i].forEach(secondDimensionItem => {
-                secondDimensionItem = i + (String.fromCharCode(a+97));
-            },a);
-
-        },i)
-        document.querySelector("#centeredDiv").appendChild(gameBoard);
+        
         console.log("getting here");
     }
     gameStart(){
@@ -48,6 +40,16 @@ class GameSesion{
                 element.remove();
             });
         }
+        let gameBoard = document.createElement("table");
+        gameBoard.id = "gameBoard";
+        this.quadrantArray.forEach(firstDimensionItem => {
+            firstDimensionItem[i].forEach(secondDimensionItem => {
+                secondDimensionItem = i + (String.fromCharCode(a+97));
+                document.querySelector("#gameBoard").appendChild(document.createElement("td").innerText = secondDimensionItem);
+            },a);
+        },i)
+
+        document.querySelector("#centeredDiv").appendChild(gameBoard);
         this.generateLevel(1);
         // this.startLevel();
         // this.tutorial(); //hopefully will come back to this
