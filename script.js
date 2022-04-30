@@ -13,12 +13,11 @@ class GameSesion{
     constructor(){
         this.username = "";
         this.levelWins = [false, false, false, false, false]; //each level is index +1  so level 1 is at index 0
-        this.quadrantArray = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
-        //2D array 15x15
-    }
+        this.quadrantArray = [];
+        this.gridSize = 10;
+        }
     generateLevel(level){
         
-        console.log("getting here");
     }
     gameStart(){
         let introText = "To be written text";
@@ -42,31 +41,38 @@ class GameSesion{
         }
         let gameBoard = document.createElement("table");
         gameBoard.id = "gameBoard";
-        this.quadrantArray.forEach(firstDimensionItem => {
-            firstDimensionItem[i].forEach(secondDimensionItem => {
-                secondDimensionItem = i + (String.fromCharCode(a+97));
-                document.querySelector("#gameBoard").appendChild(document.createElement("td").innerText = secondDimensionItem);
-            },a);
-        },i)
-
         document.querySelector("#centeredDiv").appendChild(gameBoard);
-        this.generateLevel(1);
-        // this.startLevel();
-        // this.tutorial(); //hopefully will come back to this
-
-        if(this.levelWins[0] === true){
-            this.generateLevel(2);
-        }else{
-            
+        for (let firstDimensionIndex = 0; firstDimensionIndex < this.gridSize; firstDimensionIndex++) {
+            this.quadrantArray.push([]);
+            document.querySelector("#gameBoard").appendChild(document.createElement("tr"));
+            for (let secondDimensionItem = 0; secondDimensionItem < this.gridSize; secondDimensionItem++) {
+                this.quadrantArray[firstDimensionIndex][secondDimensionItem] = firstDimensionIndex+1 + (String.fromCharCode(secondDimensionItem+97));
+                let element = document.createElement("td")
+                element.id = (this.quadrantArray[firstDimensionIndex][secondDimensionItem]);
+                element.textContent = (this.quadrantArray[firstDimensionIndex][secondDimensionItem]);
+                document.querySelector("tr:last-child").appendChild(element);
+            }
         }
-    }
+        console.log(this.quadrantArray);
+
+                this.generateLevel(1);
+                // this.startLevel();
+                // this.tutorial(); //hopefully will come back to this
+                
+                if(this.levelWins[0] === true){
+                    this.generateLevel(2);
+                }else{
+                    
+                }
+                console.log("getting here");
+            }
     winnerScreen(){
     }
     mainGame(){
-    this.gameLevelsStart();
+    this.LevelsStart();
     }
 }
 let game1 = new GameSesion();
-// game1.gameStart();
-game1.LevelsStart();
+ game1.gameStart();
+// game1.LevelsStart();
 console.log("script loaded");

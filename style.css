@@ -3,7 +3,7 @@
     /* background-image: url("outrunBackground.gif"); */
 }
 #centeredDiv{
-    margin: auto;
+    margin: 100px auto;
     width: 75%;
     height: 75%;
 }
@@ -20,9 +20,12 @@ dialog{
     color: white;
 }
 #gameBoard{
-    height:75vw;
-    display: grid;
-    grid-template-columns: 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr;
-    grid-template-rows: 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr;
+}
+tr{
+    background-color: black;
+}
+td{
     background-color: white;
+    height: 64px;
+    width: 64px;
 }
