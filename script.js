@@ -81,26 +81,31 @@ class GameSesion{
         switch (level) {
             case 1:
                 startTile = "1d"
-                moves = ["down", "down", "left", "left", "down", "down", "right", "right", "down", "down", "down"]
+                moves = ["down", "down", "left", "left", "down", "down", "down", "down", "down"]
                 
                 break;
             case 2:
+                startTile = "1a"
+                moves = ["down", "right", "right", "right", "down", "right", "right", "down", "down"]
                 
                 break;
             
             case 3:
-                
+                startTile = "1c"
+                moves = ["down", "down", "down", "left", "down", "down", "right", "right", "right", "down"]
                 break;
             
             case 4:
-                
+                startTile = "1g"
+                moves = ["down", "left", "left", "left", "down", "down", "right", "down", "down"]
                 break;
         
             case 5:
-                
+                startTile = "1d"
+                moves = ["down", "down", "left", "left", "down", "down", "right", "right", "right", "down"]
                 break;
 
-            default:
+            default: throw "reached default switch case on generateLevel"
                 break;
         }
         document.getElementById(startTile).classList.add("path");
@@ -117,6 +122,11 @@ class GameSesion{
             document.getElementById(nextTile).classList.add("path");
             lastTile = nextTile;
             
+        }
+    }
+    clearGameBoard(){
+        while(document.querySelector(".path") != undefined){
+            document.querySelector(".path").classList.remove("path")
         }
     }
     gameStart(){
@@ -152,7 +162,7 @@ class GameSesion{
                 document.querySelector("tr:last-child").appendChild(element);
             }
         }
-        this.generateLevel(1)
+        this.generateLevel(1);
         // this.startLevel();
         // this.tutorial(); //hopefully will come back to this
         
