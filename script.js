@@ -1,18 +1,19 @@
 class Towers{
     Constructor(){
-        
+        // name, range, levels can be used
+
     }
 
 }
 class Enemies{
     constructor(){
-
+        // name, range, levels can appears
     }
 }
 class GameSesion{
     constructor(){
         this.username = "";
-        this.levelWins = [false, false, false, false, false]; //each level is index +1  so level 1 is at index 0
+        this.currentLevel = 1;
         this.tileArray = [];
         this.gridSize = 10;
         this.pathArray = [];
@@ -146,6 +147,16 @@ class GameSesion{
         }
         this.pathArray = [];
     }
+    startLevel(){
+        // event listener for start button
+        // spawn enemies
+        // enemies move
+
+
+
+
+
+    }
     gameStart(){
         let introText = "To be written text";
         let introBox = document.createElement("dialog");
@@ -182,12 +193,7 @@ class GameSesion{
         this.generateLevel(1);
         // this.startLevel();
         // this.tutorial(); //hopefully will come back to this
-        
-        // if(this.levelWins[0] === true){
-        //     this.generateLevel(2);
-        // }else{
-            
-        // }
+
             }
     winnerScreen(){
     }

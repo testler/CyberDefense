@@ -26,8 +26,8 @@ tr{
 }
 td{
     background-color: white;
-    height: 128px;
-    width: 128px;
+    height: 64px;
+    width: 64px;
 }
 .path{
     background-color: blue;
