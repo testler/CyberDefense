@@ -26,9 +26,12 @@ tr{
 }
 td{
     background-color: white;
-    height: 64px;
-    width: 64px;
+    height: 128px;
+    width: 128px;
 }
 .path{
     background-color: blue;
+}
+.possibleTowerSpot{
+    background-color: red;
 }
