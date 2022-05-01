@@ -1,22 +1,38 @@
-class Towers{
+class Tower{
     Constructor(){
         // name, range, levels can be used
+        this.typeName;
+        this.range;
+        this.levels;
+    }
+    getAvailable(level){
+
+    }
+    createTowers(){
+        let pawn = new Tower("pawn", 1, [1,2,3,4,5]);
 
     }
 
 }
 class Enemies{
     constructor(){
-        // name, range, levels can appears
+        // name, speed, levels can appears
+        this.name = name;
+        this.speed = speed;
+        this.hp = hitPoints;
+        this.levels = levels;
+    }
+    getEnemyNames(Level, numberOfEnemies){
+        
     }
 }
 class GameSesion{
     constructor(){
-        this.username = "";
         this.currentLevel = 1;
         this.tileArray = [];
         this.gridSize = 10;
         this.pathArray = [];
+        this.enemiesArray = [];
         }
     getAdjacentTile(tileIndex, direction){
         //return either the tile location if given both variables
@@ -147,15 +163,40 @@ class GameSesion{
         }
         this.pathArray = [];
     }
+    generateEnemies(){
+        let numberOfEnemies = 10;
+        let enemyNameArr = Enemies.prototype.getEnemyNames(this.currentLevel, numberOfEnemies);
+        for (let index = 0; index < number; index++) {
+
+            this.enemiesArray.push(enemy);
+            
+        }
+        
+    }
     startLevel(){
-        // event listener for start button
-        // spawn enemies
-        // enemies move
+        let startButton = document.createElement("button");
+        startButton.id = "startButton";
+        startButton.appendChild(document.createTextNode("Start"));
+        document.querySelector("#centeredDiv").appendChild(startButton);
+        // need to work on css for button location
+        
+        startButton.addEventListener("click", (e) => {
+            generateEnemies(this.currentLevel);
+            // spawn enemies
+            // enemies move
 
 
+            
+            
+            
+            
 
 
+            
+            
 
+            
+        });
     }
     gameStart(){
         let introText = "To be written text";
