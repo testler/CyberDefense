@@ -8,22 +8,166 @@ class Tower{
     getAvailable(level){
 
     }
-    createTowers(){
-        let pawn = new Tower("pawn", 1, [1,2,3,4,5]);
-
-    }
 
 }
-class Enemies{
-    constructor(){
+class Enemy{
+    constructor(name){
         // name, speed, levels can appears
+        this.nameArray = ["adware"]
         this.name = name;
-        this.speed = speed;
-        this.hp = hitPoints;
-        this.levels = levels;
+        this.speed = this.getSpeed();
+        this.hp = this.getHP;
+        this.damage = getDamage();
+        }
+    getDamage(){
+        switch (this.name) {
+            case this.nameArray[1]:
+                return 100;
+                break;
+            case this.nameArray[2]:
+                return 
+                break;        
+            case this.nameArray[3]:
+                return 
+                break;
+            case this.nameArray[4]:
+                return 
+                break;
+            case this.nameArray[5]:
+                return 
+                break;
+            case this.nameArray[6]:
+                return 
+                break;
+            case this.nameArray[7]:
+                return 
+                break;
+            case this.nameArray[8]:
+                return 
+                break;
+            case this.nameArray[9]:
+                return 
+                break;
+            case this.nameArray[10]:
+                return 
+                break;
+            case this.nameArray[11]:
+                return 
+                break;
+            case this.nameArray[12]:
+                return 
+                break;
+            default: return "error";
+                break;
+        }
     }
-    getEnemyNames(Level, numberOfEnemies){
+    getSpeed(){
+        switch (this.name) {
+            case this.nameArray[1]:
+                return 10;
+                break;
+            case this.nameArray[2]:
+                return 
+                break;        
+            case this.nameArray[3]:
+                return 
+                break;
+            case this.nameArray[4]:
+                return 
+                break;
+            case this.nameArray[5]:
+                return 
+                break;
+            case this.nameArray[6]:
+                return 
+                break;
+            case this.nameArray[7]:
+                return 
+                break;
+            case this.nameArray[8]:
+                return 
+                break;
+            case this.nameArray[9]:
+                return 
+                break;
+            case this.nameArray[10]:
+                return 
+                break;
+            case this.nameArray[11]:
+                return 
+                break;
+            case this.nameArray[12]:
+                return 
+                break;
+            default: return "error";
+                break;
+        }
+    }
+    getHP(){
+        switch (this.name) {
+            case this.nameArray[1]:
+                return 50;
+                break;
+            case this.nameArray[2]:
+                return 
+                break;        
+            case this.nameArray[3]:
+                return 
+                break;
+            case this.nameArray[4]:
+                return 
+                break;
+            case this.nameArray[5]:
+                return 
+                break;
+            case this.nameArray[6]:
+                return 
+                break;
+            case this.nameArray[7]:
+                return 
+                break;
+            case this.nameArray[8]:
+                return 
+                break;
+            case this.nameArray[9]:
+                return 
+                break;
+            case this.nameArray[10]:
+                return 
+                break;
+            case this.nameArray[11]:
+                return 
+                break;
+            case this.nameArray[12]:
+                return 
+                break;
+            default: return "error";
+                break;
+        }
+    }
+    getEnemyNames(level){
         
+        switch (level) {
+            case 1:
+                return this.nameArray[1];
+                break;
+            case 2:
+                return this.nameArray[1]; //Math.floor(Math.random * 3)
+                break;        
+            case 3:
+                return this.nameArray[1]; //Math.floor(Math.random * 6)
+                break;
+            case 4:
+                return this.nameArray[1]; //Math.floor(Math.random * 8)
+                break;
+            case 5:
+                return this.nameArray[1]; //Math.floor(Math.random * 10)
+                break;
+
+                
+            default:
+                break;
+        }
     }
 }
 class GameSesion{
@@ -33,6 +177,8 @@ class GameSesion{
         this.gridSize = 10;
         this.pathArray = [];
         this.enemiesArray = [];
+        this.tick = 10000;
+        this.baseHP = 100000;
         }
     getAdjacentTile(tileIndex, direction){
         //return either the tile location if given both variables
@@ -151,7 +297,7 @@ class GameSesion{
                 }
             })
         })
-        
+
 
     }
     clearGameBoard(){
@@ -163,16 +309,6 @@ class GameSesion{
         }
         this.pathArray = [];
     }
-    generateEnemies(){
-        let numberOfEnemies = 10;
-        let enemyNameArr = Enemies.prototype.getEnemyNames(this.currentLevel, numberOfEnemies);
-        for (let index = 0; index < number; index++) {
-
-            this.enemiesArray.push(enemy);
-            
-        }
-        
-    }
     startLevel(){
         let startButton = document.createElement("button");
         startButton.id = "startButton";
@@ -181,21 +317,36 @@ class GameSesion{
         // need to work on css for button location
         
         startButton.addEventListener("click", (e) => {
-            generateEnemies(this.currentLevel);
-            // spawn enemies
-            // enemies move
-
-
-            
-            
-            
-            
-
-
-            
-            
-
-            
+            let numberOfEnemies = 10;
+            for (let index = 0; index < numberOfEnemies; index++) {
+                let enemy = Enemy.prototype.getEnemyNames(this.currentLevel);
+                let enemySprite = document.createElement("section");
+                let enemyName = (enemy + index);
+                this.enemiesArray.push(new Enemy(enemyName));
+                console.log(this.enemiesArray);
+                enemySprite.id = enemy + index;
+                enemySprite.classList.add("enemy");
+                document.querySelector("#centeredDiv").appendChild(enemySprite);
+            }
+            this.enemiesArray.forEach(enemy =>{
+                setTimeout(tick/enemy.speed);
+                let enemySprite = document.getElementById(enemy.name);
+                this.pathArray.push("base");
+                let currentTile = "";
+                for (let i = 0; ((enemy.hp > 0) && (this.pathArray[i] != "base")); i++) {
+                        document.getElementById(this.pathArray[i]).appendChild(enemySprite);
+                        document.getElementById(this.pathArray[i-1]).remove(enemySprite);
+                        currentTile = this.pathArray[i];
+                }
+                if(currentTile === "base"){
+                    this.baseHP =- enemy.damage;
+                    document.getElementById("base").remove(enemySprite);
+                }
+                if(enemy.hp <= 0){
+                    document.getElementById(currentTile).remove(enemySprite);
+                }
+            })
+            // moving enemies
         });
     }
     gameStart(){
@@ -231,8 +382,12 @@ class GameSesion{
                 document.querySelector("tr:last-child").appendChild(element);
             }
         }
+        let base = document.createElement("div");
+        base.id = "base";
+        document.querySelector("#centeredDiv").appendChild(base);
+
         this.generateLevel(1);
-        // this.startLevel();
+        this.startLevel();
         // this.tutorial(); //hopefully will come back to this
 
             }
