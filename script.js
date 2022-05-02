@@ -236,13 +236,13 @@ class GameSesion{
         }
 
     }
-    generateLevel(level){
+    generateLevel(){
             //minium of 8x8 grid
         let startTile = "";
         let moves = [];
         let lastTile = "";
         let nextTile = ""
-        switch (level) {
+        switch (this.currentLevel) {
             case 1:
                 startTile = "1d"
                 moves = ["down", "down", "left", "left", "down", "down", "down", "down", "down"]
@@ -309,7 +309,7 @@ class GameSesion{
         }
         this.pathArray = [];
     }
-    startLevel(){
+    levelStartButton(){
         let startButton = document.createElement("button");
         startButton.id = "startButton";
         startButton.appendChild(document.createTextNode("Start"));
@@ -349,6 +349,22 @@ class GameSesion{
             // moving enemies
         });
     }
+    buildTowers(){
+        document.querySelectorAll(".possibleTowerSpot").forEach(tile => {
+        tile.addEventListener("hover", event => {
+            event.currentTarget.classList.add("highlightCircle");
+            event.currentTarget.addEventListener("click", clickEvent =>{
+                let towerSeletionMenu = document.createElement("menu");
+                towerSeletionMenu.id = "towerSeletionMenu";
+                towerSeletionMenu.appendChild(document.createTextNode("Select your tower"));
+                document.querySelector(clickEvent.currentTarget).appendChild(towerSeletionMenu);
+            });
+
+            //on click of the circle activates the tower section
+
+        })
+    })
+    }
     gameStart(){
         let introText = "To be written text";
         let introBox = document.createElement("dialog");
@@ -386,8 +402,10 @@ class GameSesion{
         base.id = "base";
         document.querySelector("#centeredDiv").appendChild(base);
 
-        this.generateLevel(1);
-        this.startLevel();
+        this.generateLevel();
+        this.levelStartButton();
+        this.buildTowers();
+
         // this.tutorial(); //hopefully will come back to this
 
             }

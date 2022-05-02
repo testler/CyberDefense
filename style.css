@@ -35,6 +35,9 @@ td{
 .possibleTowerSpot{
     background-color: red;
 }
+.highlightCircle{
+    background-color: whitesmoke;
+}
 .enemy{
-    
+
 }
