@@ -39,5 +39,7 @@ td{
     background-color: whitesmoke;
 }
 .enemy{
-
+    height: 64px;
+    width: 64px;
+    background-image: url("textImg.jpg");
 }

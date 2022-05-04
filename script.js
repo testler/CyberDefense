@@ -2,26 +2,96 @@ class Tower{
     Constructor(){
         // name, range, levels can be used
         this.typeName;
-        this.range;
-        this.levels;
+        this.range = this.getRange();
+        this.damage = this.getDamage();
+        this.nameArray = this.getTowers("names");
     }
-    getAvailable(level){
+    getTowers(level){
+        let nameArray = ["pawn"]
+        switch (level) {
+            case 1:
+                console.log(nameArray[0]);
+                return [nameArray[0]];
+                break;
+            case 2:
+                return [this.nameArray[0], this.nameArray[1]]; //Math.floor(Math.random * 3)
+                break;        
+            case 3:
+                return [this.nameArray[0], this.nameArray[1],this.nameArray[2]] ; //Math.floor(Math.random * 6)
+                break;
+            case 4:
+                return [this.nameArray[0], this.nameArray[1],this.nameArray[2],this.nameArray[3]] ; //Math.floor(Math.random * 8)
+                break;
+            case 5:
+                return [this.nameArray[0], this.nameArray[1],this.nameArray[2],this.nameArray[3],this.nameArray[4]] ; //Math.floor(Math.random * 10)
+                break;
+            case "names":
+                return nameArray; //Math.floor(Math.random * 10)
+                break;                
+            default:
+                break;
+        }
+    }
+    getRange(){
+        switch (this.towerType) {
+            case this.nameArray[0]:
+                return 5;
+                break;
+            case this.nameArray[1]:
+                return ; //Math.floor(Math.random * 3)
+                break;        
+            case this.nameArray[2]:
+                return ; //Math.floor(Math.random * 6)
+                break;
+            case this.nameArray[3]:
+                return ; //Math.floor(Math.random * 8)
+                break;
+            case this.nameArray[4]:
+                return ;//Math.floor(Math.random * 10)
+                break;
+                
+            default:
+                break;
+        }
+    }
+    getDamage(){
+        switch (this.towerType) {
+            case this.nameArray[0]:
+                return 50;
+                break;
+            case this.nameArray[1]:
+                return ; //Math.floor(Math.random * 3)
+                break;        
+            case this.nameArray[2]:
+                return ; //Math.floor(Math.random * 6)
+                break;
+            case this.nameArray[3]:
+                return ; //Math.floor(Math.random * 8)
+                break;
+            case this.nameArray[4]:
+                return ;//Math.floor(Math.random * 10)
+                break;
+                
+            default:
+                break;
+        }
+    }
 
-    }
+
 
 }
 class Enemy{
     constructor(name){
         // name, speed, levels can appears
-        this.nameArray = ["adware"]
+        this.nameArray = this.getEnemyNames("names");
         this.name = name;
         this.speed = this.getSpeed();
         this.hp = this.getHP;
-        this.damage = getDamage();
+        this.damage = this.getDamage();
         }
     getDamage(){
         switch (this.name) {
-            case this.nameArray[1]:
+            case this.nameArray[0]:
                 return 100;
                 break;
             case this.nameArray[2]:
@@ -63,7 +133,7 @@ class Enemy{
     }
     getSpeed(){
         switch (this.name) {
-            case this.nameArray[1]:
+            case this.nameArray[0]:
                 return 10;
                 break;
             case this.nameArray[2]:
@@ -105,7 +175,7 @@ class Enemy{
     }
     getHP(){
         switch (this.name) {
-            case this.nameArray[1]:
+            case this.nameArray[0]:
                 return 50;
                 break;
             case this.nameArray[2]:
@@ -146,25 +216,26 @@ class Enemy{
         }
     }
     getEnemyNames(level){
-        
+        let nameArray = ["adware"];
         switch (level) {
             case 1:
-                return this.nameArray[1];
+                return nameArray[0];
                 break;
             case 2:
-                return this.nameArray[1]; //Math.floor(Math.random * 3)
+                return nameArray[1]; //Math.floor(Math.random * 3)
                 break;        
             case 3:
-                return this.nameArray[1]; //Math.floor(Math.random * 6)
+                return nameArray[1]; //Math.floor(Math.random * 6)
                 break;
             case 4:
-                return this.nameArray[1]; //Math.floor(Math.random * 8)
+                return nameArray[1]; //Math.floor(Math.random * 8)
                 break;
             case 5:
-                return this.nameArray[1]; //Math.floor(Math.random * 10)
+                return nameArray[1]; //Math.floor(Math.random * 10)
                 break;
-
-                
+            case "names":
+                return nameArray;
+                break;
             default:
                 break;
         }
@@ -177,6 +248,7 @@ class GameSesion{
         this.gridSize = 10;
         this.pathArray = [];
         this.enemiesArray = [];
+        this.towerArray = [];
         this.tick = 10000;
         this.baseHP = 100000;
         }
@@ -329,11 +401,12 @@ class GameSesion{
                 document.querySelector("#centeredDiv").appendChild(enemySprite);
             }
             this.enemiesArray.forEach(enemy =>{
-                setTimeout(tick/enemy.speed);
+                setTimeout(this.tick/enemy.speed);
                 let enemySprite = document.getElementById(enemy.name);
                 this.pathArray.push("base");
                 let currentTile = "";
                 for (let i = 0; ((enemy.hp > 0) && (this.pathArray[i] != "base")); i++) {
+
                         document.getElementById(this.pathArray[i]).appendChild(enemySprite);
                         document.getElementById(this.pathArray[i-1]).remove(enemySprite);
                         currentTile = this.pathArray[i];
@@ -351,16 +424,32 @@ class GameSesion{
     }
     buildTowers(){
         document.querySelectorAll(".possibleTowerSpot").forEach(tile => {
-        tile.addEventListener("hover", event => {
-            event.currentTarget.classList.add("highlightCircle");
-            event.currentTarget.addEventListener("click", clickEvent =>{
+        tile.addEventListener("mouseover", event => {
+        tile.addEventListener("mouseout", e => {
+            event.target.classList.remove("highlightCircle");
+        })
+            console.log(event);
+            event.target.classList.add("highlightCircle");
+            event.target.addEventListener("click", clickEvent =>{
+                let towerArr = Tower.prototype.getTowers(this.currentLevel);
+                console.log(towerArr);
                 let towerSeletionMenu = document.createElement("menu");
                 towerSeletionMenu.id = "towerSeletionMenu";
                 towerSeletionMenu.appendChild(document.createTextNode("Select your tower"));
-                document.querySelector(clickEvent.currentTarget).appendChild(towerSeletionMenu);
-            });
+                towerArr.forEach(tower => {
+                    let towerType = document.createElement("li");
+                    towerType.textContent = tower;
+                    towerSeletionMenu.appendChild(towerType);
+                    towerType.addEventListener("click", towerTypeClick => {
+                        let towerName = "tower" + (this.towerArray.length + 1);
+                        this.towerArray.push(new Tower(tower));
+                        event.target.classList.add(tower)
+                        event.target.id = towerName;
+                    })
 
-            //on click of the circle activates the tower section
+                })
+                document.querySelector("#gameBoard").appendChild(towerSeletionMenu);
+            });
 
         })
     })
@@ -403,7 +492,7 @@ class GameSesion{
         document.querySelector("#centeredDiv").appendChild(base);
 
         this.generateLevel();
-        this.levelStartButton();
+        // this.levelStartButton();
         this.buildTowers();
 
         // this.tutorial(); //hopefully will come back to this
@@ -416,6 +505,5 @@ class GameSesion{
     }
 }
 let game1 = new GameSesion();
-//  game1.gameStart();
-game1.LevelsStart();
+ game1.gameStart();
 console.log("script loaded");
