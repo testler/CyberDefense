@@ -43,7 +43,7 @@ class Tower{
     getRange(){
         switch (this.towerType) {
             case this.nameArray[0]:
-                return 5;
+                return 2;
                 break;
             case this.nameArray[1]:
                 return ; //Math.floor(Math.random * 3)
@@ -65,7 +65,7 @@ class Tower{
     getDamage(){
         switch (this.towerType) {
             case this.nameArray[0]:
-                return 50;
+                return 1;
                 break;
             case this.nameArray[1]:
                 return ; //Math.floor(Math.random * 3)
@@ -266,7 +266,7 @@ class Enemy{
 }
 class GameSesion{
     constructor(){
-        this.currentLevel = 1;
+        this.currentLevel = 0;
         this.tileArray = [];
         this.gridSize = 10;
         this.pathArray = [];
@@ -275,6 +275,7 @@ class GameSesion{
         this.tick = 10000;
         this.baseHP = 100000;
         this.credits = 100;
+        this.levelsEnd = true;
         }
     getAdjacentTile(tileIndex, direction){
         //return either the tile location if given both variables
@@ -527,12 +528,12 @@ class GameSesion{
 
     }
     gameStart(){
-        let introText = "To be written text";
+        let introText = "Welcome.\n\nYou have been selected to be the new cyber defense program.\n\nUsing your intellect, you will design and build the best defense to protect your computer against threats the wish it harm.\n\nDo you accept?";
         let introBox = document.createElement("dialog");
         let nextButton = document.createElement("button");
         nextButton.id = "nextButton";
-        introBox.appendChild(document.createTextNode(introText));
-        nextButton.appendChild(document.createTextNode("NEXT >"));
+        introBox.innerText = introText;
+        nextButton.appendChild(document.createTextNode("ACCEPT >"));
         document.querySelector("#centeredDiv").appendChild(introBox);
         document.querySelector("#centeredDiv").appendChild(nextButton);
         introBox.open = true;
@@ -547,6 +548,14 @@ class GameSesion{
         }
         let stats = document.createElement("div");
         stats.id = "stats";
+        let health = document.createElement("a");
+        let credits = document.createElement("a");
+        health.id = "health";
+        credits.id = "credits";
+        health.textContent = "HP: " + this.baseHP;
+        credits.textContent = "Credits: " + this.credits;
+        stats.appendChild(health);
+        stats.appendChild(credits);
         document.querySelector("#centeredDiv").appendChild(stats);
         let gameBoard = document.createElement("table");
         gameBoard.id = "gameBoard";
@@ -564,14 +573,10 @@ class GameSesion{
         }
         let base = document.createElement("div");
         base.id = "base";
+        base.textContent = "COMPUTER";
+        // base.appendChild(document.createElement("img"))
         document.querySelector("#centeredDiv").appendChild(base);
-
-        
-        
-
-
         // this.tutorial(); //hopefully will come back to this
-
             }
     winnerScreen(){
         document.querySelectorAll("* < #centeredDiv").remove();
@@ -592,28 +597,32 @@ class GameSesion{
         loserBox.open = true;
     }
     mainGame(){
-    this.LevelsStart();
-    while(this.currentLevel <= 5) {
-        const element = array[index];
+        this.LevelsStart();
+        this.levelStartButton();
+        this.buildTowers();
+        setInterval(() => {
+            if(this.levelsEnd == true){
+                this.levelsEnd = false;
+                this.currentLevel++;
+                if (this.baseHP <= 0) {
+                    loserScreen();
+                }
+
+                if (this.currentLevel >= 6) {
+                    this.winnerScreen();
+                }
+                this.baseHP = 100000;
+                this.credits =+ (this.currentLevel * 100);
+                this.newLevel();
+            }
+        }, 500)
+    }
+    newLevel() {
         this.clearGameBoard();
         this.generateLevel();
-        this.buildTowers();
         this.getInRangePathTiles();
-        this.levelStartButton();
-        if(this.baseHP <= 0){
-            loserScreen();
-            break;
-        }
-        this.baseHP = 100000;
-        this.credits =+ (this.currentLevel * 100)
-        this.currentLevel++;
-        if(this.currentLevel >= 6){
-            this.winnerScreen();
-        }
-    }
-
     }
 }
 let game1 = new GameSesion();
- game1.gameStart();
+game1.gameStart();
 console.log("script loaded");
