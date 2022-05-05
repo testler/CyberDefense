@@ -17,7 +17,7 @@ background-image{
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    z-index: 3;
+    z-index: 2;
     filter:none;
 }
 dialog{
@@ -32,7 +32,7 @@ dialog{
     border-radius: 5px;
     border-color: darkgrey;
     display: block;
-    z-index: 3;
+    z-index: 2;
 }
 #nextButton{
     display: block;
@@ -47,12 +47,12 @@ dialog{
     font-size: 200%;
     border-radius: 5px;
     border-color: darkgrey;
-    z-index: 3;
+    z-index: 2;
 }
 #gameBoard{
     display:grid;
     flex-wrap: wrap;
-    z-index: 3;
+    z-index: 2;
     width: fit-content;
     justify-content: center;
     flex-basis: 100%;
@@ -61,13 +61,14 @@ dialog{
 tr{
     background-color: greenyellow;
     width:fit-content;
-    z-index: 3;
+    z-index: 2;
 }
 td{
     background-color: rgb(75, 75, 75);
     height: 64px;
     width: 64px;
     z-index: 3;
+    border-radius: 5px;
 }
 .path{
     background-color: blue;
@@ -106,6 +107,8 @@ td{
     flex-basis: 100%;
     background-color: transparent;
     font-size: 300%;
+    text-align: center;
+    color: greenyellow;
 }
 /* #base > img{
     background-image: url(textImg.jpg);
@@ -116,9 +119,11 @@ td{
 .highlightCircle{
     background-color: whitesmoke;
 }
-
+#towerSeletionMenu{
+    background-color: aliceblue;
+}
 .enemy{
     height: 64px;
     width: 64px;
-    background-image: url("textImg.jpg");
+    background-image: url("enemy1.jpg");
 }

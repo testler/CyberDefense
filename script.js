@@ -8,7 +8,7 @@ class Tower{
         this.location;
         this.inRangePathTiles = [];
     }
-    getInRangePathTiles(tileArr){
+    giveInRangePathTiles(tileArr){
         this.getInRangePathTiles = tileArr;
     }
     getLocation(gridIndex){
@@ -18,7 +18,6 @@ class Tower{
         let nameArray = ["pawn"]
         switch (level) {
             case 1:
-                console.log(nameArray[0]);
                 return [nameArray[0]];
                 break;
             case 2:
@@ -65,7 +64,7 @@ class Tower{
     getDamage(){
         switch (this.towerType) {
             case this.nameArray[0]:
-                return 1;
+                return 25;
                 break;
             case this.nameArray[1]:
                 return ; //Math.floor(Math.random * 3)
@@ -157,7 +156,7 @@ class Enemy{
     getSpeed(){
         switch (this.type) {
             case this.nameArray[0]:
-                return 10;
+                return 1;
                 break;
             case this.nameArray[2]:
                 return 
@@ -272,9 +271,9 @@ class GameSesion{
         this.pathArray = [];
         this.enemiesArray = [];
         this.towerArray = [];
-        this.tick = 10000;
+        this.tick = 1000;
         this.baseHP = 100000;
-        this.credits = 100;
+        this.credits = 0;
         this.levelsEnd = true;
         }
     getAdjacentTile(tileIndex, direction){
@@ -427,68 +426,60 @@ class GameSesion{
                 document.querySelector("#centeredDiv").appendChild(enemySprite);
             }
             this.pathArray.push("base");
+            this.getInRangePathTiles();
             let index = 0;
-            setInterval(() => {
+            let interval2 = setInterval(() => {
+                // moving enemies
                 let enemy = this.enemiesArray[index];
-                this.moveEnemy(enemy)
+                this.moveEnemy(enemy);
                 index++;
-                if(index < this.enemiesArray.length){
-                    clearInterval();
-                }
-                
+                if(index)
             }, this.tick);
-            
-            // moving enemies
-            // towerFire
-            setInterval(() => {
-                enemyLocations = this.enemiesArray.map(enemy => enemy.location);
-                this.towerArray.forEach((tower =>{
-                    enemyLocations.forEach((enemyloaction, index) => {
-                        if(tower.inRangePathTiles.includes(enemyloaction)){
-                            this.enemiesArray[index].hp =- tower.damage;
-                        }
-                    })
-                }))
-            }, this.tick)
-
         }, {once: true});
     }
     moveEnemy(enemy) {
         let i = 0;
         let currentTile = "";
-        setInterval(() => {
-            console.log(enemy.name);
+        let moveInterval = setInterval(() => {
             let enemySprite = document.getElementById(enemy.name);
+            console.log(enemy);
+            console.log(enemy.name);
+            console.log(enemySprite);
+            console.log(this.pathArray[i]);
+            console.log(document.getElementById(this.pathArray[i]));
             document.getElementById(this.pathArray[i]).appendChild(enemySprite);
             // document.getElementById(this.pathArray[i-1]).remove(enemySprite);
             currentTile = this.pathArray[i];
             enemy.location = currentTile;
             i++;
-            if ((currentTile !== "base") && (enemy.hp > 0) && (this.baseHP > 0)) {
-                clearInterval();
+            if ((enemy.hp <= 0)) {
+                clearInterval(moveInterval);
+                this.enemiesArray.splice(this.enemiesArray.indexOf(enemy.name),1)
             }
             if (currentTile === "base") {
-                this.baseHP = -enemy.damage;
-                enemySprite.remove();
-                this.enemiesArray.splice(this.enemiesArray.indexOf(enemy.name));
+                this.baseHP = this.baseHP - enemy.damage;
+                document.getElementById(enemy.name).remove();
+                console.log("removed");
+                this.enemiesArray.shift();
+                console.log(this.enemiesArray);
+                clearInterval(moveInterval);
             }
-            if (enemy.hp <= 0) {
-                enemySprite.remove();
-                this.enemiesArray.splice(this.enemiesArray.indexOf(enemy));
-            }
+            if(this.enemiesArray.length === 0)
+                    {this.levelsEnd = true;
+                    clearInterval(interval2)}
         }, this.tick/enemy.speed);
     }
 
     buildTowers(){
         document.querySelectorAll(".possibleTowerSpot").forEach(tile => {
         tile.addEventListener("mouseover", event => {
-        tile.addEventListener("mouseout", e => {
+            tile.addEventListener("mouseout", e => {
             event.target.classList.remove("highlightCircle");
-        })
+            })
             event.target.classList.add("highlightCircle");
             event.target.addEventListener("click", clickEvent =>{
+
                 let towerArr = Tower.prototype.getTowers(this.currentLevel);
-                console.log(towerArr);
                 let towerSeletionMenu = document.createElement("menu");
                 towerSeletionMenu.id = "towerSeletionMenu";
                 towerSeletionMenu.appendChild(document.createTextNode("Select your tower"));
@@ -497,38 +488,40 @@ class GameSesion{
                     towerType.textContent = tower + " " + Tower.prototype.getPrice(tower) + " credits";
                     towerSeletionMenu.appendChild(towerType);
                     towerType.addEventListener("click", towerTypeClick => {
-                        if((this.credits-Tower.prototype.getPrice(tower)) > 0) {
+                        if((this.credits-Tower.prototype.getPrice(tower)) >= 0) {
+                            this.credits = this.credits-Tower.prototype.getPrice(tower);
                             let towerName = "tower" + (this.towerArray.length + 1);
                             this.towerArray.push(new Tower(tower));
                             event.target.classList.add(tower);
                             this.towerArray[this.towerArray.length-1].location = event.target.id;
+                            towerSeletionMenu.remove();
                         }else{
                             towerType.style.color = "red";
                         }
-                    })
+                    }, {once:true})
                 })
                 document.querySelector("#gameBoard").appendChild(towerSeletionMenu);
-            });
+            }, {once:true});
 
         })
     })
     }
     getInRangePathTiles(){
         this.towerArray.forEach(tower =>{
-            let location = document.getElementById(tower.location);
+            let location = document.getElementById(tower.location).id;
             let inRangeTiles = [];
-            this.getAdjacentTile(location).forEach(direction => inRangeTiles.push(this.getAdjacentTile(location, direction)))
+            this.getAdjacentTile(location).forEach((direction) => {inRangeTiles.push(this.getAdjacentTile(location, direction))})
             for (let i = 0; i < tower.range - 1; i++) {
             inRangeTiles.forEach(tile => this.getAdjacentTile(tile).forEach(direction => inRangeTiles.push(this.getAdjacentTile(tile, direction))))
             }
             let inRangePathTiles = inRangeTiles.filter(tile => this.pathArray.includes(tile));
-            tower.getInRangePathTiles(inRangePathTiles);
+            tower.giveInRangePathTiles(inRangePathTiles);
         })
         
 
     }
     gameStart(){
-        let introText = "Welcome.\n\nYou have been selected to be the new cyber defense program.\n\nUsing your intellect, you will design and build the best defense to protect your computer against threats the wish it harm.\n\nDo you accept?";
+        let introText = "Welcome.\n\nYou have been selected to be the new cyber defense program.\n\nUsing your intellect, you will design and build the best defense to protect your computer against threats that wish it harm.\n\nDo you accept?";
         let introBox = document.createElement("dialog");
         let nextButton = document.createElement("button");
         nextButton.id = "nextButton";
@@ -567,7 +560,7 @@ class GameSesion{
                 this.tileArray[firstDimensionIndex][secondDimensionItem] = firstDimensionIndex+1 + (String.fromCharCode(secondDimensionItem+97));
                 let element = document.createElement("td")
                 element.id = (this.tileArray[firstDimensionIndex][secondDimensionItem]);
-                element.textContent = (this.tileArray[firstDimensionIndex][secondDimensionItem]);
+                // element.textContent = (this.tileArray[firstDimensionIndex][secondDimensionItem]);
                 document.querySelector("tr:last-child").appendChild(element);
             }
         }
@@ -579,7 +572,7 @@ class GameSesion{
         // this.tutorial(); //hopefully will come back to this
             }
     winnerScreen(){
-        document.querySelectorAll("* < #centeredDiv").remove();
+        document.querySelectorAll("#centeredDiv > *").remove();//here
         let winnerText = "YOU WIN";
         let winnerBox = document.createElement("dialog");
         winnerBox.id = "winnerbox";
@@ -599,28 +592,44 @@ class GameSesion{
     mainGame(){
         this.LevelsStart();
         this.levelStartButton();
-        this.buildTowers();
-        setInterval(() => {
-            if(this.levelsEnd == true){
-                this.levelsEnd = false;
+        this.tickEvents();
+        
+    }
+    tickEvents() {
+        let tickInterval = setInterval(() => {
+            if(this.levelsEnd === true){
                 this.currentLevel++;
                 if (this.baseHP <= 0) {
                     loserScreen();
+                    clearInterval(tickInterval);
                 }
 
                 if (this.currentLevel >= 6) {
                     this.winnerScreen();
+                    clearInterval(tickInterval);
                 }
+                this.clearGameBoard();
+                this.generateLevel();
                 this.baseHP = 100000;
                 this.credits =+ (this.currentLevel * 100);
-                this.newLevel();
+                this.buildTowers();
+                this.levelsEnd = false;
             }
-        }, 500)
-    }
-    newLevel() {
-        this.clearGameBoard();
-        this.generateLevel();
-        this.getInRangePathTiles();
+            // towerFire
+            let enemyLocations = this.enemiesArray.map(enemy => enemy.location);
+            this.towerArray.forEach((tower =>{
+                enemyLocations.forEach((enemyloaction, index) => {
+                    this.getInRangePathTiles();
+                    console.log(tower);
+                    console.log(tower.getInRangePathTiles);
+                    if(tower.getInRangePathTiles.includes(enemyloaction)){
+                        this.enemiesArray[index].hp =- tower.damage;
+                    }
+                })
+            }))
+            document.getElementById("health").textContent = "HP: " + this.baseHP;
+            document.getElementById("credits").textContent = "Credits: " + this.credits;
+        }, this.tick);
     }
 }
 let game1 = new GameSesion();
