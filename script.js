@@ -1,10 +1,12 @@
 class Tower{
-    Constructor(){
-        // name, range, levels can be used
-        this.typeName;
+    constructor(typeName, name){
+        // name, range, levels can be used new
+        // new Tower(tower, towerName)
+        this.nameArray = this.getTowers("names");
+        this.typeName = typeName;
+        this.name = name;
         this.range = this.getRange();
         this.damage = this.getDamage();
-        this.nameArray = this.getTowers("names");
         this.location;
         this.inRangePathTiles = [];
     }
@@ -40,7 +42,7 @@ class Tower{
         }
     }
     getRange(){
-        switch (this.towerType) {
+        switch (this.typeName) {
             case this.nameArray[0]:
                 return 2;
                 break;
@@ -62,7 +64,7 @@ class Tower{
         }
     }
     getDamage(){
-        switch (this.towerType) {
+        switch (this.typeName) {
             case this.nameArray[0]:
                 return 25;
                 break;
@@ -98,7 +100,7 @@ class Tower{
 
 }
 class Enemy{
-    constructor(name, type){
+    constructor(name, type, index){
         // name, speed, levels can appears
         this.nameArray = this.getEnemyNames("names");
         this.type = type;
@@ -107,6 +109,7 @@ class Enemy{
         this.hp = this.getHP();
         this.damage = this.getDamage();
         this.location;
+        this.index = index;
         }
     getLocation(location){
         this.location = location;
@@ -275,6 +278,7 @@ class GameSesion{
         this.baseHP = 100000;
         this.credits = 0;
         this.levelsEnd = true;
+        this.levelStart == false;
         }
     getAdjacentTile(tileIndex, direction){
         //return either the tile location if given both variables
@@ -426,11 +430,12 @@ class GameSesion{
             let enemy = Enemy.prototype.getEnemyNames(this.currentLevel);
             let enemySprite = document.createElement("section");
             let enemyName = (enemy + index);
-            this.enemiesArray.push(new Enemy(enemyName, enemy));
-            enemySprite.id = enemy + index;
+            this.enemiesArray.push(new Enemy(enemyName, enemy, index));
+            enemySprite.id = enemyName;
             enemySprite.classList.add("enemy");
             document.querySelector("#centeredDiv").appendChild(enemySprite);
         }
+        this.startLevel = true;
         this.getInRangePathTiles();
         this.pathArray.push("base");
         let index = 0;
@@ -445,30 +450,40 @@ class GameSesion{
     }
 
     moveEnemy(enemy) {
+    try {    
         let i = 0;
         let currentTile = "";
         let enemySprite = document.getElementById(enemy.name);
         let moveInterval = setInterval(() => {
             if(this.enemiesArray.length <= 0){
-                this.levelsEnd = true;
+                // this.levelsEnd = true;
+                // console.log(this.levelsEnd);
                 clearInterval(moveInterval);
             }
             if(enemy.location === "base"){
                 this.baseHP = this.baseHP - enemy.damage;
                 enemySprite.remove();
-                this.enemiesArray.splice(this.enemiesArray.indexOf(enemy.name),1);
+                this.enemiesArray.splice(this.enemiesArray.findIndex(enemyItem => enemyItem == enemy.name),1);
                 clearInterval(moveInterval);
             }
             this.towerArray.forEach(towerObject => {
                 if((towerObject.inRangePathTiles).includes(enemy.location)){
+                    console.log(enemy.hp);
+                    console.log(towerObject);
+                    console.log(enemy);
                     enemy.hp = enemy.hp - towerObject.damage;
+                    console.log("hit");
+                    console.log(enemy.hp);
                 }
             });
             if(enemy.hp <= 0){
                 enemySprite.remove();
+                console.log(this.enemiesArray);
+                // document.getElementById(currentTile).removeChild(enemySprite);
                 this.enemiesArray.splice(this.enemiesArray.indexOf(enemy.name),1);
+                console.log(this.enemiesArray);
                 clearInterval(moveInterval);
-            }enemySprite
+            }
             document.getElementById(this.pathArray[i]).appendChild(enemySprite);
             currentTile = this.pathArray[i];
             enemy.location = currentTile;
@@ -478,7 +493,10 @@ class GameSesion{
             }
             // towerFire
         }, this.tick);//this needs to change
+    }catch (error) {
+        console.log(error);
     }
+}
 
     buildTowers(){
         document.querySelectorAll(".possibleTowerSpot").forEach(tile => {
@@ -500,7 +518,9 @@ class GameSesion{
                             if ((this.credits - Tower.prototype.getPrice(tower)) >= 0) {
                                 this.credits = this.credits - Tower.prototype.getPrice(tower);
                                 let towerName = "tower" + (this.towerArray.length + 1);
-                                this.towerArray.push(new Tower(tower));
+                                this.towerArray.push((new Tower(tower, towerName))); //i thick something is wrong here
+                                console.log(tower);
+                                console.log(this.towerArray);
                                 event.target.classList.add(tower);
                                 this.towerArray[this.towerArray.length - 1].location = event.target.id;
                                 towerSeletionMenu.removeChild(towerSeletionMenu.firstChild);
@@ -622,6 +642,10 @@ class GameSesion{
             if(this.levelsEnd === true){
                 this.levelComplete();
                 this.buildTowers();
+            }
+            if((this.enemiesArray.length <= 0) && (this.levelStart == true)){
+                this.levelsEnd = true;
+                this.levelStart == false;
             }
         }, this.tick);
     }
