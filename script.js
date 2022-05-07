@@ -1,7 +1,6 @@
 class Tower{
     constructor(typeName, name){
-        // name, range, levels can be used new
-        // new Tower(tower, towerName)
+
         this.nameArray = this.getTowers("names");
         this.typeName = typeName;
         this.name = name;
@@ -23,19 +22,19 @@ class Tower{
                 return [nameArray[0]];
                 break;
             case 2:
-                return [nameArray[0]]; //Math.floor(Math.random * 3)
+                return [nameArray[0]]; 
                 break;        
             case 3:
-                return [nameArray[0]] ; //Math.floor(Math.random * 6)
+                return [nameArray[0]] ;
                 break;
             case 4:
-                return [nameArray[0]] ; //Math.floor(Math.random * 8)
+                return [nameArray[0]] ;
                 break;
             case 5:
-                return [nameArray[0]] ; //Math.floor(Math.random * 10)
+                return [nameArray[0]] ; 
                 break;
             case "names":
-                return nameArray; //Math.floor(Math.random * 10)
+                return nameArray;
                 break;                
             default:
                 break;
@@ -47,16 +46,16 @@ class Tower{
                 return 2;
                 break;
             case this.nameArray[1]:
-                return ; //Math.floor(Math.random * 3)
+                return ; 
                 break;        
             case this.nameArray[2]:
-                return ; //Math.floor(Math.random * 6)
+                return ; 
                 break;
             case this.nameArray[3]:
-                return ; //Math.floor(Math.random * 8)
+                return ; 
                 break;
             case this.nameArray[4]:
-                return ;//Math.floor(Math.random * 10)
+                return ;
                 break;
                 
             default:
@@ -69,16 +68,16 @@ class Tower{
                 return 25;
                 break;
             case this.nameArray[1]:
-                return ; //Math.floor(Math.random * 3)
+                return ; 
                 break;        
             case this.nameArray[2]:
-                return ; //Math.floor(Math.random * 6)
+                return ; 
                 break;
             case this.nameArray[3]:
-                return ; //Math.floor(Math.random * 8)
+                return ; 
                 break;
             case this.nameArray[4]:
-                return ;//Math.floor(Math.random * 10)
+                return ;
                 break;
                 
             default:
@@ -247,16 +246,16 @@ class Enemy{
                 return nameArray[0];
                 break;
             case 2:
-                return nameArray[1]; //Math.floor(Math.random * 3)
+                return nameArray[1]; 
                 break;        
             case 3:
-                return nameArray[1]; //Math.floor(Math.random * 6)
+                return nameArray[1]; 
                 break;
             case 4:
-                return nameArray[1]; //Math.floor(Math.random * 8)
+                return nameArray[1]; 
                 break;
             case 5:
-                return nameArray[1]; //Math.floor(Math.random * 10)
+                return nameArray[1]; 
                 break;
             case "names":
                 return nameArray;
@@ -604,36 +603,21 @@ class GameSesion{
                 this.tileArray[firstDimensionIndex][secondDimensionItem] = firstDimensionIndex+1 + (String.fromCharCode(secondDimensionItem+97));
                 let element = document.createElement("td")
                 element.id = (this.tileArray[firstDimensionIndex][secondDimensionItem]);
-                // element.textContent = (this.tileArray[firstDimensionIndex][secondDimensionItem]);
                 document.querySelector("tr:last-child").appendChild(element);
             }
         }
         let base = document.createElement("div");
         base.id = "base";
         base.textContent = "COMPUTER";
-        // base.appendChild(document.createElement("img"))
         document.querySelector("#centeredDiv").appendChild(base);
-        // this.tutorial(); //hopefully will come back to this
             }
     winnerScreen(){
         alert("YOU WIN!");
-    //     document.querySelectorAll("#centeredDiv > *").remove();//here
-    //     let winnerText = "YOU WIN";
-    //     let winnerBox = document.createElement("dialog");
-    //     winnerBox.id = "winnerbox";
-    //     winnerBox.appendChild(document.createTextNode(winnerText));
-    //     document.querySelector("#centeredDiv").appendChild(winnerBox);
-    //     introBox.open = true;
+
     }
     loserScreen(){
         alert("You lost");
-    //     document.querySelectorAll("* < #centeredDiv").remove();
-    //     let loserText = "YOU LOSE";
-    //     let loserBox = document.createElement("dialog");
-    //     loserBox.id = "loserBox";
-    //     loserBox.appendChild(document.createTextNode(loserText));
-    //     document.querySelector("#centeredDiv").appendChild(loserBox);
-    //     loserBox.open = true;
+
     }
     mainGame(){
         this.LevelsStart();
@@ -660,11 +644,6 @@ class GameSesion{
                 this.levelComplete();
                 this.buildTowers();
             }
-            // if((this.enemiesArray.length <= 0) && (this.levelStart == true)){
-            //     this.levelsEnd = true;
-            //     this.levelStart == false;
-            //     console.log("gets heer");
-            // }
             if(this.enemiesArray.every(ele => ele.hp <= 0)){
                 this.enemiesArray.length = 0;
             }
