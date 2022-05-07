@@ -22,10 +22,10 @@ As a player, I want to be able to win or lose.
 As a player, I want to be able to play the game
 
 <h2>Wireframes</h2>
-![project 1 pic](https://user-images.githubusercontent.com/7112451/167258612-cf284ec4-61d0-4064-9619-31f408463c3e.png)
-![project 1 pic 2](https://user-images.githubusercontent.com/7112451/167258623-3401f7a3-2f35-4f1b-a9e1-165083f26f78.png)
-![project 1 pic 3](https://user-images.githubusercontent.com/7112451/167258627-a5ab7e86-7be5-43c9-9ac3-02b0e735e7d4.png)
-![project1 pic4](https://user-images.githubusercontent.com/7112451/167258600-e4dc8c06-c8e5-4b65-b422-2d2d71a6cce2.png)
+![project 1 pic](https://user-images.githubusercontent.com/7112451/167258760-f60d1d86-c774-4df5-92dc-db8c3c26b5b8.png)
+![project 1 pic 2](https://user-images.githubusercontent.com/7112451/167258771-4e7af148-c811-478a-acc4-729d95c2eec4.png)
+![project 1 pic 3](https://user-images.githubusercontent.com/7112451/167258787-633ed187-07f4-44e1-903e-c609aee739a1.png)
+![project1 pic4](https://user-images.githubusercontent.com/7112451/167258798-d5145538-cadb-49ca-b2aa-bb977993513e.png)
 
 
 <h2>Problems</h2>
