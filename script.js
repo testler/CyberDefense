@@ -17,22 +17,22 @@ class Tower{
         this.location = gridIndex;
     }
     getTowers(level){
-        let nameArray = ["pawn"]
+        let nameArray = ["pawn"];
         switch (level) {
             case 1:
                 return [nameArray[0]];
                 break;
             case 2:
-                return [this.nameArray[0], this.nameArray[1]]; //Math.floor(Math.random * 3)
+                return [nameArray[0]]; //Math.floor(Math.random * 3)
                 break;        
             case 3:
-                return [this.nameArray[0], this.nameArray[1],this.nameArray[2]] ; //Math.floor(Math.random * 6)
+                return [nameArray[0]] ; //Math.floor(Math.random * 6)
                 break;
             case 4:
-                return [this.nameArray[0], this.nameArray[1],this.nameArray[2],this.nameArray[3]] ; //Math.floor(Math.random * 8)
+                return [nameArray[0]] ; //Math.floor(Math.random * 8)
                 break;
             case 5:
-                return [this.nameArray[0], this.nameArray[1],this.nameArray[2],this.nameArray[3],this.nameArray[4]] ; //Math.floor(Math.random * 10)
+                return [nameArray[0]] ; //Math.floor(Math.random * 10)
                 break;
             case "names":
                 return nameArray; //Math.floor(Math.random * 10)
@@ -275,9 +275,9 @@ class GameSesion{
         this.enemiesArray = [];
         this.towerArray = [];
         this.tick = 1000;
-        this.baseHP = 100000;
+        this.baseHP = 900;
         this.credits = 0;
-        this.levelsEnd = true;
+        this.levelsEnd = true;// this is false when it should be true;
         this.levelStart == false;
         }
     getAdjacentTile(tileIndex, direction){
@@ -343,7 +343,9 @@ class GameSesion{
         let moves = [];
         let lastTile = "";
         let nextTile = ""
-        switch (this.currentLevel) {
+        let rand = Math.floor(Math.random()*4)+1;
+        console.log(rand);
+        switch (rand) {
             case 1:
                 startTile = "1d"
                 moves = ["down", "down", "left", "left", "down", "down", "down", "down", "down"]
@@ -435,17 +437,19 @@ class GameSesion{
             enemySprite.classList.add("enemy");
             document.querySelector("#centeredDiv").appendChild(enemySprite);
         }
-        this.startLevel = true;
         this.getInRangePathTiles();
         this.pathArray.push("base");
         let index = 0;
+        let count = this.enemiesArray.length;
+        this.levelStart = true;
         let intervalSendOutEnemies = setInterval(() => {
-            if (index >= this.enemiesArray.length) {
+            if (index >= count) {
                 clearInterval(intervalSendOutEnemies);
             }
             let enemy = this.enemiesArray[index];
             this.moveEnemy(enemy);
             index++;
+            this.levelStart == true;
         }, this.tick);
     }
 
@@ -455,15 +459,17 @@ class GameSesion{
         let currentTile = "";
         let enemySprite = document.getElementById(enemy.name);
         let moveInterval = setInterval(() => {
+            if(enemy == null || enemy == undefined){
+                clearInterval(moveInterval);
+            }
             if(this.enemiesArray.length <= 0){
-                // this.levelsEnd = true;
-                // console.log(this.levelsEnd);
+
                 clearInterval(moveInterval);
             }
             if(enemy.location === "base"){
                 this.baseHP = this.baseHP - enemy.damage;
                 enemySprite.remove();
-                this.enemiesArray.splice(this.enemiesArray.findIndex(enemyItem => enemyItem == enemy.name),1);
+                this.removeObject(enemy,this.enemiesArray);
                 clearInterval(moveInterval);
             }
             this.towerArray.forEach(towerObject => {
@@ -479,8 +485,8 @@ class GameSesion{
             if(enemy.hp <= 0){
                 enemySprite.remove();
                 console.log(this.enemiesArray);
-                // document.getElementById(currentTile).removeChild(enemySprite);
-                this.enemiesArray.splice(this.enemiesArray.indexOf(enemy.name),1);
+                document.getElementById(currentTile).removeChild(enemySprite);
+                this.removeObject(enemy,this.enemiesArray);
                 console.log(this.enemiesArray);
                 clearInterval(moveInterval);
             }
@@ -488,15 +494,20 @@ class GameSesion{
             currentTile = this.pathArray[i];
             enemy.location = currentTile;
             i++;
-            if(i > this.pathArray.length){
-                clearInterval(moveInterval);
-            }
             // towerFire
         }, this.tick);//this needs to change
     }catch (error) {
         console.log(error);
     }
 }
+    removeObject(arrObject, arr){
+        for (let index = 0; index < arr.length; index++) {
+            const element = arr[index];
+            if(arr[index] === arrObject){
+                arr.splice(index, 1);
+            }
+        }
+    }
 
     buildTowers(){
         document.querySelectorAll(".possibleTowerSpot").forEach(tile => {
@@ -526,6 +537,8 @@ class GameSesion{
                                 towerSeletionMenu.removeChild(towerSeletionMenu.firstChild);
                                 towerSeletionMenu.removeChild(towerType);
                                 towerSeletionMenu.remove();
+                                document.querySelectorAll("#towerSeletionMenu").forEach((menu) => menu.removeChild(menu.firstChild));
+                                document.querySelectorAll("#towerSeletionMenu").forEach((menu) => menu.remove());
                             } else {
                                 towerType.style.color = "red";
                             }
@@ -603,32 +616,36 @@ class GameSesion{
         // this.tutorial(); //hopefully will come back to this
             }
     winnerScreen(){
-        document.querySelectorAll("#centeredDiv > *").remove();//here
-        let winnerText = "YOU WIN";
-        let winnerBox = document.createElement("dialog");
-        winnerBox.id = "winnerbox";
-        winnerBox.appendChild(document.createTextNode(winnerText));
-        document.querySelector("#centeredDiv").appendChild(winnerBox);
-        introBox.open = true;
+        alert("YOU WIN!");
+    //     document.querySelectorAll("#centeredDiv > *").remove();//here
+    //     let winnerText = "YOU WIN";
+    //     let winnerBox = document.createElement("dialog");
+    //     winnerBox.id = "winnerbox";
+    //     winnerBox.appendChild(document.createTextNode(winnerText));
+    //     document.querySelector("#centeredDiv").appendChild(winnerBox);
+    //     introBox.open = true;
     }
     loserScreen(){
-        document.querySelectorAll("* < #centeredDiv").remove();
-        let loserText = "YOU LOSE";
-        let loserBox = document.createElement("dialog");
-        loserBox.id = "loserBox";
-        loserBox.appendChild(document.createTextNode(loserText));
-        document.querySelector("#centeredDiv").appendChild(loserBox);
-        loserBox.open = true;
+        alert("You lost");
+    //     document.querySelectorAll("* < #centeredDiv").remove();
+    //     let loserText = "YOU LOSE";
+    //     let loserBox = document.createElement("dialog");
+    //     loserBox.id = "loserBox";
+    //     loserBox.appendChild(document.createTextNode(loserText));
+    //     document.querySelector("#centeredDiv").appendChild(loserBox);
+    //     loserBox.open = true;
     }
     mainGame(){
         this.LevelsStart();
         this.levelStartButton();
+        this.levelComplete();
+        this.buildTowers();
         this.tickEvents();
         
     }
     tickEvents() {
         let tickInterval = setInterval(() => {
-            if(this.currentLevel >= 6){
+            if(this.currentLevel >= 2){
                 this.winnerScreen();
                 clearInterval(tickInterval);
             }
@@ -639,13 +656,17 @@ class GameSesion{
             document.getElementById("health").textContent = "HP: " + this.baseHP;
             document.getElementById("credits").textContent = "Credits: " + this.credits;
             //level complete
-            if(this.levelsEnd === true){
+            if((this.enemiesArray.length <= 0) && (this.levelStart == true)){
                 this.levelComplete();
                 this.buildTowers();
             }
-            if((this.enemiesArray.length <= 0) && (this.levelStart == true)){
-                this.levelsEnd = true;
-                this.levelStart == false;
+            // if((this.enemiesArray.length <= 0) && (this.levelStart == true)){
+            //     this.levelsEnd = true;
+            //     this.levelStart == false;
+            //     console.log("gets heer");
+            // }
+            if(this.enemiesArray.every(ele => ele.hp <= 0)){
+                this.enemiesArray.length = 0;
             }
         }, this.tick);
     }
@@ -654,10 +675,11 @@ class GameSesion{
         this.currentLevel++;
         this.clearGameBoard(); // needs work
         this.generateLevel();
-        this.baseHP = 100000;
+        this.baseHP = 900;
         this.credits = +(this.currentLevel * 100);
         this.levelsEnd = false;
-        
+        this.levelStart = false;
+        console.log("new level");
     }
 }
 let game1 = new GameSesion();

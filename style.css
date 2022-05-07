@@ -71,10 +71,12 @@ td{
     border-radius: 5px;
 }
 .path{
-    background-color: blue;
+    background-color: rgb(147, 12, 177);
+    background-image: url("enemypath.jpg");
 }
 .possibleTowerSpot{
-    background-color: red;
+    background-color: rgb(23, 0, 155);
+    background-image: url("blue_background.jpg");
 }
 #startButton{
     display: block;
@@ -114,10 +116,12 @@ td{
     background-image: url(textImg.jpg);
 } */
 .pawn{
-    background-color: purple;
+    background-color: rgb(75, 232, 3);
+    background-image: url("towerbig_pic.jpg");
 }
 .highlightCircle{
     background-color: whitesmoke;
+    background-image: url("highlightCircle.jpg");
 }
 #towerSeletionMenu{
     background-color: aliceblue;
