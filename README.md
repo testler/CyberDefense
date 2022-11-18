@@ -27,4 +27,4 @@ URL: https://testler.github.io/CyberDefense/
 
 
 ## Problems
-I had a problem removing items, issues with the level completing. basicly anything to do with my intervals was an issue.
+If you place down a tower after hitting start the enemies aren't affected. basicly anything to do with my intervals was an issue.
