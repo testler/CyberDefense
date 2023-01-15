@@ -1,4 +1,4 @@
-# <h1 align="center">:school_satchel: Cyber Defense :school_satchel: </h1>
+# <h1 align="center">💻🛡️ Cyber Defense 💻🛡️ </h1>
  #### <h3 align="center">https://testler.github.io/CyberDefense/</h3>
  
 ## Summary
