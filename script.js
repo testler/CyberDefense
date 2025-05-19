@@ -1,3 +1,199 @@
+// --- THREE.JS SETUP ---
+let scene, camera, renderer;
+let gridTiles = [];
+const GRID_SIZE = 10;
+const TILE_SIZE = 1.2; // Spacing between tiles
+let pathTiles = [];
+let hoveredTile = null;
+let hoveredTileOriginalColor = null;
+
+function initThree() {
+    // Scene
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x222222);
+
+    // Camera (top-down, slightly tilted)
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(GRID_SIZE / 2, GRID_SIZE * 1.5, GRID_SIZE * 1.5);
+    camera.lookAt(GRID_SIZE / 2, 0, GRID_SIZE / 2);
+
+    // Renderer
+    const canvas = document.getElementById('gameCanvas');
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(0, 1, 1);
+    scene.add(directionalLight);
+
+    // Create 3D grid
+    create3DGrid();
+
+    // Simplified animation loop (no hover-specific animation)
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // Handle window resize
+    window.addEventListener('resize', onWindowResize, false);
+
+    // Mouse interactivity
+    canvas.addEventListener('mousemove', onMouseMove, true);
+    canvas.addEventListener('click', onMouseClick, true);
+}
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+function onMouseMove(event) {
+    console.log("onMouseMove triggered"); // 1. Is the event firing?
+
+    const rect = renderer.domElement.getBoundingClientRect();
+    const rawMouseX = event.clientX - rect.left;
+    const rawMouseY = event.clientY - rect.top;
+    // console.log("Raw mouse (in canvas):", rawMouseX, rawMouseY); // 2. Raw mouse coords
+
+    mouse.x = (rawMouseX / rect.width) * 2 - 1;
+    mouse.y = -(rawMouseY / rect.height) * 2 + 1;
+    // console.log("Normalized mouse:", mouse.x, mouse.y); // 3. Normalized coords
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(gridTiles.flat());
+    // console.log("Raycaster intersections:", intersects.length); // 4. Intersections found
+
+    // Reset previous hovered tile
+    if (hoveredTile) {
+        if (hoveredTileOriginalColor !== null) {
+             hoveredTile.material.color.setHex(hoveredTileOriginalColor);
+        }
+    }
+    
+    hoveredTile = null;
+    hoveredTileOriginalColor = null;
+
+    if (intersects.length > 0) {
+        const tile = intersects[0].object;
+        // console.log("Intersected tile object:", tile); // 5. First intersected object
+        // console.log("Intersected tile userData:", tile.userData); // 6. Its userData
+
+        const { gridX, gridZ } = tile.userData;
+        
+        const isPathTile = pathTiles.some(pt => pt.x === gridX && pt.z === gridZ);
+        const isTowerTile = towers.some(t => t.x === gridX && t.z === gridZ);
+        // console.log("Is path?", isPathTile, "Is tower?", isTowerTile); // 7. Tile status
+
+        if (!isPathTile && !isTowerTile) {
+            // console.log("Valid hover target - setting red"); // 8. Valid target found
+            hoveredTile = tile;
+            hoveredTileOriginalColor = tile.material.color.getHex();
+            tile.material.color.set(0xff0000); // Set to RED for testing
+        } else {
+            // console.log("Invalid hover target (path or tower tile)");
+        }
+    } else {
+        // console.log("No intersections with grid tiles.");
+    }
+}
+
+function placeTower(x, z) {
+    // Prevent placing on path or on a tile that already has a tower
+    if (pathTiles.some(pt => pt.x === x && pt.z === z)) return;
+    if (towers.some(t => t.x === x && t.z === z)) return;
+
+    // Create a tower (cylinder)
+    const geometry = new THREE.CylinderGeometry(0.35, 0.35, 1, 16);
+    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // Green
+    const tower = new THREE.Mesh(geometry, material);
+    tower.position.set(x * TILE_SIZE, 0.55, z * TILE_SIZE); // Slightly above the tile
+    scene.add(tower);
+    towers.push({ x, z, mesh: tower });
+}
+
+function onMouseClick(event) {
+    if (hoveredTile) {
+        const { gridX, gridZ } = hoveredTile.userData;
+        placeTower(gridX, gridZ);
+    }
+}
+
+function createSimplePath() {
+    // Simple zig-zag path from (0,0) to (9,9)
+    pathTiles = [];
+    let x = 0, z = 0;
+    let direction = 1; // 1 for right, -1 for left
+    while (z < GRID_SIZE) {
+        pathTiles.push({ x, z });
+        if ((direction === 1 && x === GRID_SIZE - 1) || (direction === -1 && x === 0)) {
+            z++;
+            if (z < GRID_SIZE) pathTiles.push({ x, z });
+            direction *= -1;
+        } else {
+            x += direction;
+        }
+    }
+}
+
+function highlightPathTiles() {
+    const pathMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700 }); // gold
+    pathTiles.forEach(({ x, z }) => {
+        if (gridTiles[x] && gridTiles[x][z]) {
+            gridTiles[x][z].material = pathMaterial;
+        }
+    });
+}
+
+function create3DGrid() {
+    // Remove old tiles if any
+    gridTiles.forEach(row => row.forEach(tile => scene.remove(tile)));
+    gridTiles = [];
+    const tileGeometry = new THREE.BoxGeometry(1, 0.1, 1);
+    const tileMaterial = new THREE.MeshStandardMaterial({ color: 0x444488 });
+    for (let x = 0; x < GRID_SIZE; x++) {
+        let row = [];
+        for (let z = 0; z < GRID_SIZE; z++) {
+            const tile = new THREE.Mesh(tileGeometry, tileMaterial.clone());
+            tile.position.set(x * TILE_SIZE, 0, z * TILE_SIZE);
+            tile.userData = { gridX: x, gridZ: z };
+            scene.add(tile);
+            row.push(tile);
+        }
+        gridTiles.push(row);
+    }
+    createSimplePath();
+    highlightPathTiles();
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// Initialize Three.js scene
+initThree();
+
+// --- EXISTING GAME LOGIC (WRAPPED) ---
+function initOldGameLogic() {
+    // ... existing code ...
+    // --- CYBERSECURITY CONFIGS ---
+    const CYBER_TOWERS = [
+        // ... existing code ...
+    ];
+
+    // ... existing code ...
+}
+
+// Call the old game logic (for now)
+// initOldGameLogic(); // We'll call this later or integrate parts of it
+
+// Make sure to comment out or adapt parts of initOldGameLogic that try to manipulate the DOM directly
+// until they are properly integrated with the 3D scene or a separate HTML UI overlay.
+
 // --- CYBERSECURITY CONFIGS ---
 const CYBER_TOWERS = [
   {
