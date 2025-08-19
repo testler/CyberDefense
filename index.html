@@ -4,12 +4,37 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyber Defense 3D</title>
+    <title>Cyber Defense</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="icon" type="image/png" href="antivirus.png">
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
+    <!-- Optional 3D canvas (disabled by default via feature flag in script.js) -->
+    <canvas id="gameCanvas" style="display:none"></canvas>
+
+    <!-- Main UI container for 2D game -->
+    <div id="centeredDiv">
+        <div id="topBar">
+            <div id="title">CYBER DEFENSE</div>
+            <div id="controls">
+                <button id="pauseBtn" title="Pause/Resume">Pause</button>
+                <label for="speedSelect">Speed:</label>
+                <select id="speedSelect">
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2x</option>
+                    <option value="3">3x</option>
+                </select>
+                <label><input type="checkbox" id="muteToggle"> Mute</label>
+                <label><input type="checkbox" id="showRangesToggle"> Show Ranges</label>
+                <label><input type="checkbox" id="reduceMotionToggle"> Reduce Motion</label>
+                <button id="settingsBtn" title="Settings">⚙️ Settings</button>
+            </div>
+        </div>
+        <!-- The game board and panels are injected by script.js -->
+    </div>
+
+    <script src="script.js"></script>
 </body>
-<script src="script.js"></script>
 </html>

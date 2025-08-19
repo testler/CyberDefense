@@ -1,6 +1,128 @@
 *{
     font-family: monospace;
 }
+/* Colorblind-friendly palette toggle */
+body.colorblind {
+    --primary:#00bcd4; /* teal */
+    --accent:#ff9800;  /* orange */
+    --success:#4caf50;
+    --warning:#ffc107;
+    --danger:#f44336;
+}
+:root{
+    --bg-0:#0f0f1e; 
+    --panel:#181828;
+    --text:#e8f6ff;
+    --primary:#00fff7;
+    --accent:#ff00ea;
+    --success:#00ff90;
+    --warning:#ffea00;
+    --danger:#ff0033;
+    --border:rgba(0,255,247,0.35);
+    --radius-s:6px; --radius-m:10px; --radius-l:16px;
+    --shadow-1:0 0 8px var(--primary);
+    --shadow-2:0 0 16px var(--primary), 0 0 4px var(--accent);
+}
+/* Accessibility: focus ring */
+:where(button, [role="button"], a, select, input):focus-visible{
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+/* Reduced motion helper */
+body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after{
+    animation: none !important;
+    transition: none !important;
+}
+/* Toasts */
+.toast-container{
+    position: fixed; right: 16px; bottom: 16px; z-index: 4000;
+    display: flex; flex-direction: column; gap: 10px;
+}
+.toast{
+    background: var(--panel); color: var(--text);
+    border: 2px solid var(--primary); border-radius: var(--radius-s);
+    padding: 10px 14px; box-shadow: var(--shadow-1);
+    font-size: 0.95em; max-width: 320px;
+}
+.toast.success{ border-color: var(--success); box-shadow: 0 0 8px var(--success); }
+.toast.warn{ border-color: var(--warning); box-shadow: 0 0 8px var(--warning); }
+.toast.error{ border-color: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+/* Buttons and selects */
+button, select {
+    background: var(--panel);
+    color: var(--text);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-s);
+    padding: 6px 12px;
+    box-shadow: var(--shadow-1);
+    cursor: pointer;
+}
+button:hover, select:hover { box-shadow: var(--shadow-2); }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Placement preview */
+.valid-spot { box-shadow: inset 0 0 0 3px rgba(0,255,0,0.6); }
+.invalid-spot { box-shadow: inset 0 0 0 3px rgba(255,0,0,0.6); }
+
+/* Responsive HUD */
+#stats { display: flex; gap: 20px; flex-wrap: wrap; }
+@media (max-width: 600px){
+  #stats { font-size: 0.9em; gap: 12px; }
+}
+/* Difficulty control styling inside welcome dialog */
+dialog#welcomeDialog label[for="difficultySelect"],
+dialog.intro-dialog label[for="difficultySelect"]{
+    color: #00fff7;
+    margin-right: 8px;
+}
+dialog#welcomeDialog select#difficultySelect,
+dialog.intro-dialog select#difficultySelect{
+    background: #181828;
+    color: #00fff7;
+    border: 2px solid #00fff7;
+    border-radius: 6px;
+    padding: 6px 10px;
+    outline: none;
+}
+/* Top bar */
+#topBar{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    box-sizing: border-box;
+    border-bottom: 1px solid rgba(0,255,247,0.3);
+}
+#title{
+    color: #00fff7;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px #00fff7, 0 0 2px #ff00ea;
+}
+#controls{
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+#controls button, #controls select, #controls label{
+    background: #181828;
+    color: #00fff7;
+    border: 2px solid #00fff7;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+#controls select{
+    padding: 6px 8px;
+}
+#controls label{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+}
 html{
     background: url("outrunBackground.gif");
     background-size: cover;
@@ -276,7 +398,6 @@ td{
 } */
 .pawn, .firewall{
     background-color: #00fff7;
-    background-image: url("towerbig_pic.jpg");
     box-shadow: 0 0 8px #00fff7;
 }
 .antivirus{
@@ -376,6 +497,102 @@ td{
     box-shadow: 0 0 16px #ff0033, 0 0 8px #fff;
     background: rgba(255,0,51,0.85);
 }
+.hp-bar {
+    position: absolute;
+    bottom: 2px;
+    left: 4px;
+    right: 4px;
+    height: 6px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 4px;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 11;
+}
+.hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00ff7f, #00c3ff);
+    width: 100%;
+}
+.structure-hp {
+    position: absolute;
+    bottom: 2px;
+    left: 4px;
+    right: 4px;
+    height: 6px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(0,255,247,0.4);
+    border-radius: 4px;
+    overflow: hidden;
+    z-index: 6;
+}
+.structure-hp .hp-fill { background: linear-gradient(90deg, #ffae00, #ff0066); }
+
+.dmg-indicator {
+    position: absolute;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-weight: 800;
+    text-shadow: 0 0 6px #000, 0 0 2px #ff0033;
+    animation: floatFade 700ms ease-out forwards;
+    pointer-events: none;
+    z-index: 20;
+}
+@keyframes floatFade {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -100%) scale(0.9); }
+}
+
+.range-in-path {
+    outline: 2px dashed rgba(0,255,247,0.8);
+    box-shadow: 0 0 10px rgba(0,255,247,0.6) inset;
+}
+
+/* Circular range overlay drawn around a selected tower */
+.range-circle-overlay {
+    border: 2px dashed rgba(0,255,247,0.85);
+    border-radius: 50%;
+    box-shadow: 0 0 16px rgba(0,255,247,0.6), inset 0 0 12px rgba(0,255,247,0.35);
+    filter: drop-shadow(0 0 4px rgba(255,0,234,0.4));
+    z-index: 1200;
+    pointer-events: none;
+}
+
+/* Neon beam line from tower to target */
+.beam-line {
+    height: 3px;
+    background: linear-gradient(90deg, rgba(0,255,247,0.95), rgba(255,0,234,0.8));
+    box-shadow: 0 0 8px rgba(0,255,247,0.9), 0 0 6px rgba(255,0,234,0.7);
+    border-radius: 2px;
+    z-index: 1100;
+    opacity: 0.95;
+    animation: beamFade 220ms ease-out forwards;
+}
+@keyframes beamFade {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.bullet {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #00fff7;
+    box-shadow: 0 0 8px #00fff7;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.9;
+    animation: bulletPop 250ms ease-out forwards;
+    z-index: 15;
+}
+@keyframes bulletPop {
+    0% { transform: translate(-50%, -50%) scale(0.4); opacity: 0.2; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
 .enemy-img, .tower-img {
     width: 100%;
     height: 100%;
@@ -438,18 +655,33 @@ td{
 }
 #enemyInfoPanel .enemy-panel-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     margin-bottom: 12px;
     gap: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed rgba(0,255,247,0.15);
 }
 #enemyInfoPanel .enemy-panel-icon {
-    font-size: 2em;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    border: 1px solid rgba(0,255,247,0.35);
+    border-radius: 6px;
+    background: rgba(0,0,0,0.2);
+}
+#enemyInfoPanel .enemy-panel-icon img.enemy-img{
+    width: 28px;
+    height: 28px;
+    max-width: 28px;
+    max-height: 28px;
+}
+#enemyInfoPanel .enemy-panel-icon .default-img{
+    font-size: 1.3em;
+    text-shadow: none;
+    margin: 0;
 }
 #enemyInfoPanel .enemy-panel-details {
     flex: 1;
@@ -462,12 +694,12 @@ td{
 }
 #enemyInfoPanel .enemy-panel-count {
     color: #00fff7;
-    font-size: 0.95em;
+    font-size: 0.9em;
     margin-left: 6px;
 }
 #enemyInfoPanel .enemy-panel-desc {
     color: #fff;
-    font-size: 0.95em;
+    font-size: 0.9em;
     margin-top: 2px;
     word-break: break-word;
 }
