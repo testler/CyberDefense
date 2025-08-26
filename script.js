@@ -592,7 +592,7 @@ startTowersLoop() {
 }
 
 // Settings modal for colorblind toggle
-openSettingsModal(){
+    openSettingsModal(){
     // Remove existing
     document.getElementById('settingsModal')?.remove();
     const modal = document.createElement('dialog');
@@ -621,352 +621,320 @@ openSettingsModal(){
     };
     modal.querySelector('#settingsClose').onclick = () => modal.close();
     if (typeof modal.showModal === 'function') modal.showModal(); else modal.setAttribute('open','');
-}
+    }
 
-buildTowers(){
-// Remove previous listeners by cloning nodes on both buildable and path tiles
-document.querySelectorAll(".possibleTowerSpot, .path").forEach(tile => {
-    let newTile = tile.cloneNode(true);
-    tile.parentNode.replaceChild(newTile, tile);
-});
-// Attach listeners to both non-path buildable tiles and path tiles
-document.querySelectorAll(".possibleTowerSpot, .path").forEach(tile => {
-    tile.addEventListener('mouseover', (event) => {
-        // Do not apply hover highlight if tile is part of a persistent range highlight
-        if (!event.target.classList.contains('range-in-path')) {
-            event.target.classList.add("highlightCircle");
-        }
-        // Placement preview: valid/invalid glow
-        const hasTower = this.towerArray.some(t => t.location === event.target.id);
-        const isPath = this.pathArray.includes(event.target.id);
-        if (!hasTower && !isPath) {
-            event.target.classList.add('valid-spot');
-            event.target.classList.remove('invalid-spot');
-        } else {
-            event.target.classList.add('invalid-spot');
-            event.target.classList.remove('valid-spot');
-        }
-        tile.addEventListener("mouseout", e => {
-            // Only remove hover highlight; keep persistent range highlight intact
-            if (!e.target.classList.contains('range-in-path')) {
-                e.target.classList.remove("highlightCircle");
-            } else {
-                // Ensure no hover class lingers even if added previously
-                e.target.classList.remove("highlightCircle");
-            }
-            e.target.classList.remove('valid-spot');
-            e.target.classList.remove('invalid-spot');
-        }, { once: true });
-        // Drag-over preview: show valid/invalid when dragging an inventory item
-        tile.addEventListener('dragover', (e) => {
-            try{
-                const idxText = e.dataTransfer.getData('text/plain');
-                if (idxText === null || idxText === undefined || idxText === '') { return; }
-                e.preventDefault(); // allow drop
-                const idx = parseInt(idxText, 10);
-                const saved = isNaN(idx) ? null : this.inventory[idx];
-                if (!saved) return;
-                const isPath = tile.classList.contains('path');
-                const valid = (saved.key === 'firewall' && isPath) || (saved.key !== 'firewall' && !isPath);
-                tile.classList.toggle('valid-spot', !!valid);
-                tile.classList.toggle('invalid-spot', !valid);
-            }catch(err){}
+    buildTowers(){
+        // Remove previous listeners by cloning nodes on both buildable and path tiles
+        document.querySelectorAll('.possibleTowerSpot, .path').forEach(tile => {
+            const newTile = tile.cloneNode(true);
+            tile.parentNode.replaceChild(newTile, tile);
         });
-        tile.addEventListener('dragleave', () => {
-            tile.classList.remove('valid-spot');
-            tile.classList.remove('invalid-spot');
-        });
-        tile.addEventListener('drop', (e) => {
+        // Attach listeners to both non-path buildable tiles and path tiles
+        document.querySelectorAll('.possibleTowerSpot, .path').forEach(tile => {
+            // Hover handlers
+            tile.addEventListener('mouseover', (event) => {
+                if (!event.target.classList.contains('range-in-path')) {
+                    event.target.classList.add('highlightCircle');
+                }
+                const hasTower = this.towerArray.some(t => t.location === event.target.id);
+                const isPath = this.pathArray.includes(event.target.id);
+                if (!hasTower && !isPath) {
+                    event.target.classList.add('valid-spot');
+                    event.target.classList.remove('invalid-spot');
+                } else {
+                    event.target.classList.add('invalid-spot');
+                    event.target.classList.remove('valid-spot');
+                }
+            });
+            tile.addEventListener('mouseout', (e) => {
+                if (!e.target.classList.contains('range-in-path')) {
+                    e.target.classList.remove('highlightCircle');
+                }
+                e.target.classList.remove('valid-spot');
+                e.target.classList.remove('invalid-spot');
+            });
+            // Drag-over preview: show valid/invalid when dragging an inventory item
+            tile.addEventListener('dragover', (e) => {
+                try {
+                    const idxText = e.dataTransfer.getData('text/plain');
+                    if (idxText === null || idxText === undefined || idxText === '') { return; }
+                    e.preventDefault(); // allow drop
+                    const idx = parseInt(idxText, 10);
+                    const saved = isNaN(idx) ? null : this.inventory[idx];
+                    if (!saved) return;
+                    const isPath = tile.classList.contains('path');
+                    const valid = (saved.key === 'firewall' && isPath) || (saved.key !== 'firewall' && !isPath);
+                    tile.classList.toggle('valid-spot', !!valid);
+                    tile.classList.toggle('invalid-spot', !valid);
+                } catch(err){}
+            });
+            tile.addEventListener('dragleave', () => {
+                tile.classList.remove('valid-spot');
+                tile.classList.remove('invalid-spot');
+            });
+            tile.addEventListener('drop', (e) => {
                 e.preventDefault();
                 const idxText = e.dataTransfer.getData('text/plain');
                 const idx = parseInt(idxText, 10);
                 const saved = isNaN(idx) ? null : this.inventory[idx];
                 if (!saved) return;
                 const ok = this.placeSavedTowerAt(saved, tile);
-                // Clear classes
                 tile.classList.remove('valid-spot');
                 tile.classList.remove('invalid-spot');
                 if (ok) {
                     this.removeInventoryAt(idx);
                     this.pendingInventory = null;
                     this.updateInventoryUI();
+                }
+            });
+            // Click handler (selection/sell/upgrade menu)
+            tile.addEventListener('click', (event) => {
+                // if menu for different tile opened, close that menu
+                document.querySelector('#towerSeletionMenu')?.remove();
+                // If placing from inventory (armed), try to place and exit
+                if (this.pendingInventory) {
+                    const ok = this.placeSavedTowerAt(this.pendingInventory.saved, event.currentTarget || event.target);
+                    if (ok) {
+                        this.removeInventoryAt(this.pendingInventory.idx);
+                        this.pendingInventory = null;
+                        this.updateInventoryUI();
                     }
-                event.target.addEventListener("click", tileSection => {
-                    // if menu for different tile opened, close that menu
-                    if (document.querySelector("#towerSeletionMenu")){
-                        document.querySelector("#towerSeletionMenu").remove();
-                    }
-                    // If placing from inventory (armed), try to place and exit
-                    if (this.pendingInventory) {
-                        const ok = this.placeSavedTowerAt(this.pendingInventory.saved, event.target);
-                        if (ok) {
-                            this.removeInventoryAt(this.pendingInventory.idx);
-                            this.pendingInventory = null;
-                            this.updateInventoryUI();
+                    event.stopPropagation();
+                    event.preventDefault();
+                    return;
+                }
+                // If tile already has a tower, open the sell/upgrade menu
+                const tileEl = event.currentTarget || event.target;
+                const tileId = tileEl && tileEl.id ? tileEl.id : event.target.id;
+                const existingTower = this.towerArray.find(t => t.location === tileId);
+                if (existingTower) {
+                    document.querySelector('#towerSellMenu')?.remove();
+                    const sellMenu = document.createElement('div');
+                    sellMenu.id = 'towerSellMenu';
+                    sellMenu.style.background = '#0f0f1e';
+                    sellMenu.style.border = '2px solid #00fff7';
+                    sellMenu.style.borderRadius = '8px';
+                    sellMenu.style.color = '#00fff7';
+                    sellMenu.style.padding = '8px 12px';
+                    sellMenu.style.position = 'absolute';
+                    sellMenu.innerHTML = "<button class='close-btn' title='Close'>&#10006;</button>";
+                    const towerConfig = CYBER_TOWERS.find(tw => tw.key === existingTower.key) || { name: existingTower.key };
+                    const info = document.createElement('div');
+                    info.style.margin = '6px 0';
+                    info.innerHTML = getImageFor(existingTower.key, false) + ' <b>' + (towerConfig.name || existingTower.key) + '</b><br>' +
+                                     `Level: ${existingTower.level} | Range: ${existingTower.range} | Damage: ${existingTower.damage}`;
+                    sellMenu.appendChild(info);
+                    const upBtn = document.createElement('button');
+                    upBtn.textContent = `Upgrade (+30% dmg${(existingTower.level+1)%2===0?', +1 range':''}) - ${existingTower.getUpgradeCost()}`;
+                    upBtn.style.background = '#181828';
+                    upBtn.style.color = '#00fff7';
+                    upBtn.style.border = '2px solid #00fff7';
+                    upBtn.style.borderRadius = '6px';
+                    upBtn.style.fontSize = '1.0em';
+                    upBtn.style.margin = '6px 0';
+                    upBtn.style.padding = '6px 12px';
+                    upBtn.onclick = () => {
+                        if (this.credits >= existingTower.getUpgradeCost()) {
+                            this.credits -= existingTower.getUpgradeCost();
+                            existingTower.applyUpgrade();
+                            this.getInRangePathTiles();
+                            this.updateHUD();
+                            info.innerHTML = getImageFor(existingTower.key, false) + ' <b>' + (towerConfig.name || existingTower.key) + '</b><br>' +
+                                             `Level: ${existingTower.level} | Range: ${existingTower.range} | Damage: ${existingTower.damage}`;
+                            upBtn.textContent = `Upgrade (+30% dmg${(existingTower.level+1)%2===0?', +1 range':''}) - ${existingTower.getUpgradeCost()}`;
+                            this.updateAllRangeHighlights(this.showRanges);
+                            showToast('Upgraded');
+                            this.playSfx('power');
+                        } else {
+                            upBtn.style.color = 'red';
                         }
-                        event.stopPropagation();
-                        event.preventDefault();
-                        return;
-                    }
-                    // If tile already has a tower, open the sell/upgrade menu
-                    const tileEl = event.currentTarget || event.target;
-                    const tileId = tileEl && tileEl.id ? tileEl.id : event.target.id;
-                    const existingTower = this.towerArray.find(t => t.location === tileId);
-                    if (existingTower) {
-                        // Close any other menu
-                        document.querySelector('#towerSellMenu')?.remove();
-                        const sellMenu = document.createElement('div');
-                        sellMenu.id = 'towerSellMenu';
-                        sellMenu.style.background = '#0f0f1e';
-                        sellMenu.style.border = '2px solid #00fff7';
-                        sellMenu.style.borderRadius = '8px';
-                        sellMenu.style.color = '#00fff7';
-                        sellMenu.style.padding = '8px 12px';
-                        sellMenu.style.position = 'absolute';
-                        sellMenu.innerHTML = "<button class='close-btn' title='Close'>&#10006;</button>";
-                        // Info
-                        const towerConfig = CYBER_TOWERS.find(tw => tw.key === existingTower.key) || { name: existingTower.key };
-                        const info = document.createElement('div');
-                        info.style.margin = '6px 0';
-                        info.innerHTML = getImageFor(existingTower.key, false) + ' <b>' + (towerConfig.name || existingTower.key) + '</b><br>' +
-                                         `Level: ${existingTower.level} | Range: ${existingTower.range} | Damage: ${existingTower.damage}`;
-                        sellMenu.appendChild(info);
-                        // Upgrade button
-                        const upBtn = document.createElement('button');
-                        upBtn.textContent = `Upgrade (+30% dmg${(existingTower.level+1)%2===0?', +1 range':''}) - ${existingTower.getUpgradeCost()}`;
-                        upBtn.style.background = '#181828';
-                        upBtn.style.color = '#00fff7';
-                        upBtn.style.border = '2px solid #00fff7';
-                        upBtn.style.borderRadius = '6px';
-                        upBtn.style.fontSize = '1.0em';
-                        upBtn.style.margin = '6px 0';
-                        upBtn.style.padding = '6px 12px';
-                        upBtn.onclick = () => {
-                            if (this.credits >= existingTower.getUpgradeCost()) {
-                                this.credits -= existingTower.getUpgradeCost();
-                                existingTower.applyUpgrade();
-                                this.getInRangePathTiles();
-                                this.updateHUD();
-                                // Refresh info and next cost
-                                info.innerHTML = getImageFor(existingTower.key, false) + ' <b>' + (towerConfig.name || existingTower.key) + '</b><br>' +
-                                                 `Level: ${existingTower.level} | Range: ${existingTower.range} | Damage: ${existingTower.damage}`;
-                                upBtn.textContent = `Upgrade (+30% dmg${(existingTower.level+1)%2===0?', +1 range':''}) - ${existingTower.getUpgradeCost()}`;
-                                this.updateAllRangeHighlights(this.showRanges);
-                                showToast('Upgraded');
-                                this.playSfx('power');
-                            } else {
-                                upBtn.style.color = 'red';
+                    };
+                    sellMenu.appendChild(upBtn);
+                    document.querySelector('#centeredDiv').appendChild(sellMenu);
+                    const rect = tileEl.getBoundingClientRect();
+                    sellMenu.style.left = (rect.right + 10 + window.scrollX) + 'px';
+                    sellMenu.style.top = (rect.top + window.scrollY) + 'px';
+                    sellMenu.querySelector('.close-btn').addEventListener('click', e => { sellMenu.remove(); e.stopPropagation(); });
+                    event.stopPropagation();
+                    return;
+                }
+                // Create Selection menu and add it to dom next to tile
+                const towerSeletionMenu = document.createElement('div');
+                towerSeletionMenu.id = 'towerSeletionMenu';
+                towerSeletionMenu.style.background = '#0f0f1e';
+                towerSeletionMenu.innerHTML = "<button class='close-btn' title='Close'>&#10006;</button>";
+                towerSeletionMenu.appendChild(document.createTextNode('Select your cybersecurity tool:'));
+                const isPathTile = (event.currentTarget || event.target).classList.contains('path');
+                const allowedTowers = CYBER_TOWERS.filter(tw => isPathTile ? (tw.key === 'firewall') : (tw.key !== 'firewall'));
+                const baseTileEl = event.currentTarget || event.target;
+                allowedTowers.forEach(tower => {
+                    const towerType = document.createElement('button');
+                    towerType.innerHTML = `<b>${tower.name}</b> — ${tower.price}<br><small>Range: ${tower.range} | Damage: ${tower.damage}</small>`;
+                    towerType.title = tower.name + "\nRange: " + tower.range + "  Damage: " + tower.damage + "\nSpecial: " + (tower.special || '-');
+                    towerType.addEventListener('mouseenter', () => {
+                        try {
+                            const previewId = 'hoverTowerPreview';
+                            if (!baseTileEl.querySelector('#'+previewId)) {
+                                const wrap = document.createElement('div');
+                                wrap.id = previewId;
+                                wrap.style.position = 'absolute';
+                                wrap.style.left = '50%';
+                                wrap.style.top = '50%';
+                                wrap.style.transform = 'translate(-50%, -50%)';
+                                wrap.style.pointerEvents = 'none';
+                                wrap.innerHTML = getImageFor(tower.key, false);
+                                baseTileEl.style.position = baseTileEl.style.position || 'relative';
+                                baseTileEl.appendChild(wrap);
                             }
-                        };
-                        sellMenu.appendChild(upBtn);
-                        document.querySelector('#centeredDiv').appendChild(sellMenu);
-                        // Position near tile
-                        const rect = tileEl.getBoundingClientRect();
-                        sellMenu.style.left = (rect.right + 10 + window.scrollX) + 'px';
-                        sellMenu.style.top = (rect.top + window.scrollY) + 'px';
-                        sellMenu.querySelector('.close-btn').addEventListener('click', e => { sellMenu.remove(); e.stopPropagation(); });
-                        event.stopPropagation();
-                        return;
-                    }
-                    // Create Selection menu and add it to dom next to tile
-                    let towerSeletionMenu = document.createElement("div");
-                    towerSeletionMenu.id = "towerSeletionMenu";
-                    towerSeletionMenu.style.background = '#0f0f1e';
-                    towerSeletionMenu.innerHTML = "<button class='close-btn' title='Close'>&#10006;</button>";
-                    towerSeletionMenu.appendChild(document.createTextNode("Select your cybersecurity tool:"));
-                    // Determine allowed towers based on tile type
-                    const isPathTile = event.target.classList.contains('path');
-                    const allowedTowers = CYBER_TOWERS.filter(tw => isPathTile ? (tw.key === 'firewall') : (tw.key !== 'firewall'));
-                    const baseTileEl = event.currentTarget || event.target;
-                    allowedTowers.forEach(tower => {
-                        let towerType = document.createElement("button");
-                        towerType.innerHTML = `<b>${tower.name}</b> — ${tower.price}<br><small>Range: ${tower.range} | Damage: ${tower.damage}</small>`;
-                        towerType.title = tower.name + "\nRange: " + tower.range + "  Damage: " + tower.damage + "\nSpecial: " + (tower.special || '-');
-                        // Hover preview: show icon in tile and highlight estimated range
-                        towerType.addEventListener('mouseenter', () => {
-                            try {
-                                const previewId = 'hoverTowerPreview';
-                                // Icon in the tile
-                                if (!baseTileEl.querySelector('#'+previewId)) {
-                                    const wrap = document.createElement('div');
-                                    wrap.id = previewId;
-                                    wrap.style.position = 'absolute';
-                                    wrap.style.left = '50%';
-                                    wrap.style.top = '50%';
-                                    wrap.style.transform = 'translate(-50%, -50%)';
-                                    wrap.style.pointerEvents = 'none';
-                                    wrap.innerHTML = getImageFor(tower.key, false);
-                                    baseTileEl.style.position = baseTileEl.style.position || 'relative';
-                                    baseTileEl.appendChild(wrap);
-                                }
-                                // Build a temporary tower object to reuse highlight APIs
-                                const temp = { key: tower.key, range: tower.range, location: baseTileEl.id, inRangePathTiles: [] };
-                                // compute inRange similar to getInRangePathTiles
-                                const toRC = (id) => {
-                                    try{
-                                        const row = parseInt(id.replace(/[^0-9].*$/,'') || '0', 10);
-                                        const letter = id.replace(/^\d+/,'').charAt(0);
-                                        const col = letter ? (letter.charCodeAt(0) - 96) : 0;
-                                        return { r: row, c: col };
-                                    } catch { return { r:0, c:0 }; }
-                                };
-                                const dist = (a,b) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
-                                const tRC = toRC(baseTileEl.id);
-                                const tiles = [];
-                                (this.pathArray || []).forEach(pid => {
-                                    if (pid === 'base') return;
-                                    const pRC = toRC(pid);
-                                    if (dist(tRC, pRC) <= (tower.range || 1)) tiles.push(pid);
-                                });
-                                temp.inRangePathTiles = tiles;
-                                // Show overlays
-                                this.highlightTowerRange(temp, true);
-                                this.showRangeCircle(temp, true);
-                            } catch(e) { console.log(e); }
-                        });
-                        towerType.addEventListener('mouseleave', () => {
-                            try {
-                                baseTileEl.querySelector('#hoverTowerPreview')?.remove();
-                                // remove overlays
-                                this.highlightTowerRange({ inRangePathTiles: (this.pathArray||[]) }, false);
-                                this.showRangeCircle(null, false);
-                                // If global ranges are on, reapply them
-                                this.updateAllRangeHighlights(this.showRanges);
-                            } catch(e) { console.log(e); }
-                        });
-                        towerType.style.background = '#181828';
-                        towerType.style.color = '#00fff7';
-                        towerType.style.border = '2px solid #00fff7';
-                        towerType.style.borderRadius = '6px';
-                        towerType.style.fontSize = '1.1em';
-                        towerType.style.margin = '8px 0';
-                        towerType.style.padding = '6px 18px';
-                        towerType.style.cursor = 'pointer';
-                        towerType.addEventListener("click", purchaseClick => {
-                            // Prevent building if already a tower here
-                            if (this.towerArray.find(t => t.location === event.target.id)) {
-                                towerSeletionMenu.remove();
-                                return;
-                            }
-                            // Safety guard: enforce placement rules
-                            const pathTileNow = event.target.classList.contains('path');
-                            if ((tower.key === 'firewall' && !pathTileNow) || (tower.key !== 'firewall' && pathTileNow)) {
-                                towerSeletionMenu.remove();
-                                return;
-                            }
-                            if ((this.credits - tower.price) >= 0) {
-                                this.credits = this.credits - tower.price;
-                                let towerName = `${tower.key}_${this.towerArray.length + 1}`;
-                                this.towerArray.push(new Tower(tower.key, towerName));
-                                event.target.classList.add(tower.key);
-                                this.towerArray[this.towerArray.length - 1].location = event.target.id;
-                                this.towerArray[this.towerArray.length - 1].targetingMode = 'first';
-                                // Inject visual for the tower
-                                event.target.insertAdjacentHTML('beforeend', getImageFor(tower.key, false));
-                                // For structures: add HP bar UI
-                                if (tower.key === 'firewall' || tower.key === 'honeypot') {
-                                    const structure = this.towerArray[this.towerArray.length - 1];
-                                    this.updateStructureHpUI(event.target, structure, true);
-                                }
-                                towerSeletionMenu.remove();
-                                this.updateHUD();
-                                this.getInRangePathTiles(); // recalc after build
-                                // Refresh global range highlights if enabled
-                                this.updateAllRangeHighlights(this.showRanges);
-                                showToast(`${tower.name} deployed`);
-                                this.playSfx('power');
-                                // Push to undo stack
-                                try { this.undoStack.push({ tileId: event.target.id, towerKey: tower.key, price: tower.price }); } catch(e){}
-                            } else {
-                                towerType.style.color = "red";
-                            }
-                        }, { once: true });
-                        towerSeletionMenu.appendChild(towerType);
-                    });
-                    // Inventory placement options
-                    if ((this.inventory || []).length > 0) {
-                        const sep = document.createElement('div');
-                        sep.style.margin = '6px 0';
-                        sep.style.borderTop = '1px dashed rgba(0,255,247,0.3)';
-                        towerSeletionMenu.appendChild(sep);
-                        const invLabel = document.createElement('div');
-                        invLabel.textContent = 'From Inventory:';
-                        invLabel.style.marginTop = '6px';
-                        towerSeletionMenu.appendChild(invLabel);
-                        // Group available by key
-                        const byKey = {};
-                        this.inventory.forEach(t => { byKey[t.key] = (byKey[t.key] || 0) + 1; });
-                        Object.keys(byKey).forEach(key => {
-                            const invBtn = document.createElement('button');
-                            invBtn.textContent = `${key} x${byKey[key]} (free)`;
-                            invBtn.style.background = '#181828';
-                            invBtn.style.color = '#00fff7';
-                            invBtn.style.border = '2px solid #00fff7';
-                            invBtn.style.borderRadius = '6px';
-                            invBtn.style.fontSize = '1.0em';
-                            invBtn.style.margin = '6px 0';
-                            invBtn.style.padding = '6px 12px';
-                            invBtn.onclick = () => {
-                                // Enforce placement rules
-                                const pathTileNow = event.target.classList.contains('path');
-                                if ((key === 'firewall' && !pathTileNow) || (key !== 'firewall' && pathTileNow)) {
-                                    towerSeletionMenu.remove();
-                                    return;
-                                }
-                                const saved = this.takeFromInventory(key);
-                                if (!saved) return;
-                                // Place saved tower with its stats
-                                const name = `${key}_${this.towerArray.length + 1}`;
-                                const t = new Tower(key, name);
-                                t.level = saved.level || t.level;
-                                t.range = saved.range || t.range;
-                                t.damage = saved.damage || t.damage;
-                                if (t.key === 'firewall' || t.key === 'honeypot') {
-                                    t.maxHp = saved.maxHp || t.maxHp;
-                                    t.hp = saved.maxHp || t.maxHp;
-                                }
-                                t.location = event.target.id;
-                                t.targetingMode = 'first';
-                                this.towerArray.push(t);
-                                event.target.classList.add(key);
-                                event.target.insertAdjacentHTML('beforeend', getImageFor(key, false));
-                                if (key === 'firewall' || key === 'honeypot') {
-                                    this.updateStructureHpUI(event.target, t, true);
-                                }
-                                this.updateInventoryUI();
-                                towerSeletionMenu.remove();
-                                this.getInRangePathTiles();
-                                this.updateAllRangeHighlights(this.showRanges);
-                                showToast(`${key} placed from inventory`);
-                                this.playSfx('power');
+                            const temp = { key: tower.key, range: tower.range, location: baseTileEl.id, inRangePathTiles: [] };
+                            const toRC = (id) => {
+                                try{
+                                    const row = parseInt(id.replace(/[^0-9].*$/,''), 10);
+                                    const letter = id.replace(/^\d+/,'').charAt(0);
+                                    const col = letter ? (letter.charCodeAt(0) - 96) : 0;
+                                    return { r: row, c: col };
+                                } catch { return { r:0, c:0 }; }
                             };
-                            towerSeletionMenu.appendChild(invBtn);
-                        });
-                    }
-                    document.querySelector('#centeredDiv').appendChild(towerSeletionMenu);
-                    // Position menu near the tile
-                    let rect = event.target.getBoundingClientRect();
-                    towerSeletionMenu.style.position = "absolute";
-                    towerSeletionMenu.style.left = (rect.right + 10 + window.scrollX) + 'px';
-                    towerSeletionMenu.style.top = (rect.top + window.scrollY) + 'px';
-                    // Close button
-                    towerSeletionMenu.querySelector('.close-btn').addEventListener('click', e => {
-                        towerSeletionMenu.remove();
-                        e.stopPropagation();
+                            const dist = (a,b) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
+                            const tRC = toRC(baseTileEl.id);
+                            const tiles = [];
+                            (this.pathArray || []).forEach(pid => {
+                                if (pid === 'base') return;
+                                const pRC = toRC(pid);
+                                if (dist(tRC, pRC) <= (tower.range || 1)) tiles.push(pid);
+                            });
+                            temp.inRangePathTiles = tiles;
+                            this.highlightTowerRange(temp, true);
+                            this.showRangeCircle(temp, true);
+                        } catch(e) { console.log(e); }
                     });
-                    // Dismiss menu when clicking outside
-                    setTimeout(() => {
-                      const outsideClick = (e) => {
-                        if (!towerSeletionMenu.contains(e.target)) {
-                          towerSeletionMenu.remove();
-                          document.removeEventListener('mousedown', outsideClick);
+                    towerType.addEventListener('mouseleave', () => {
+                        try {
+                            baseTileEl.querySelector('#hoverTowerPreview')?.remove();
+                            this.highlightTowerRange({ inRangePathTiles: (this.pathArray||[]) }, false);
+                            this.showRangeCircle(null, false);
+                            this.updateAllRangeHighlights(this.showRanges);
+                        } catch(e) { console.log(e); }
+                    });
+                    towerType.style.background = '#181828';
+                    towerType.style.color = '#00fff7';
+                    towerType.style.border = '2px solid #00fff7';
+                    towerType.style.borderRadius = '6px';
+                    towerType.style.fontSize = '1.1em';
+                    towerType.style.margin = '8px 0';
+                    towerType.style.padding = '6px 18px';
+                    towerType.style.cursor = 'pointer';
+                    towerType.addEventListener('click', () => {
+                        if (this.towerArray.find(t => t.location === baseTileEl.id)) {
+                            towerSeletionMenu.remove();
+                            return;
                         }
-                      };
-                      document.addEventListener('mousedown', outsideClick);
-                    }, 0);
-                }, { once: true });
-            }); // end mouseover listener
-        }); // end forEach over tiles
+                        const pathTileNow = baseTileEl.classList.contains('path');
+                        if ((tower.key === 'firewall' && !pathTileNow) || (tower.key !== 'firewall' && pathTileNow)) {
+                            towerSeletionMenu.remove();
+                            return;
+                        }
+                        if ((this.credits - tower.price) >= 0) {
+                            this.credits -= tower.price;
+                            const towerName = `${tower.key}_${this.towerArray.length + 1}`;
+                            const newT = new Tower(tower.key, towerName);
+                            newT.location = baseTileEl.id;
+                            newT.targetingMode = 'first';
+                            this.towerArray.push(newT);
+                            baseTileEl.classList.add(tower.key);
+                            baseTileEl.insertAdjacentHTML('beforeend', getImageFor(tower.key, false));
+                            if (tower.key === 'firewall' || tower.key === 'honeypot') {
+                                this.updateStructureHpUI(baseTileEl, newT, true);
+                            }
+                            towerSeletionMenu.remove();
+                            this.updateHUD();
+                            this.getInRangePathTiles();
+                            this.updateAllRangeHighlights(this.showRanges);
+                            showToast(`${tower.name} deployed`);
+                            this.playSfx('power');
+                            try { this.undoStack.push({ tileId: baseTileEl.id, towerKey: tower.key, price: tower.price }); } catch(e){}
+                        } else {
+                            towerType.style.color = 'red';
+                        }
+                    }, { once: true });
+                    towerSeletionMenu.appendChild(towerType);
+                });
+                if ((this.inventory || []).length > 0) {
+                    const sep = document.createElement('div');
+                    sep.style.margin = '6px 0';
+                    sep.style.borderTop = '1px dashed rgba(0,255,247,0.3)';
+                    towerSeletionMenu.appendChild(sep);
+                    const invLabel = document.createElement('div');
+                    invLabel.textContent = 'From Inventory:';
+                    invLabel.style.marginTop = '6px';
+                    towerSeletionMenu.appendChild(invLabel);
+                    const byKey = {};
+                    this.inventory.forEach(t => { byKey[t.key] = (byKey[t.key] || 0) + 1; });
+                    Object.keys(byKey).forEach(key => {
+                        const invBtn = document.createElement('button');
+                        invBtn.textContent = `${key} x${byKey[key]} (free)`;
+                        invBtn.style.background = '#181828';
+                        invBtn.style.color = '#00fff7';
+                        invBtn.style.border = '2px solid #00fff7';
+                        invBtn.style.borderRadius = '6px';
+                        invBtn.style.fontSize = '1.0em';
+                        invBtn.style.margin = '6px 0';
+                        invBtn.style.padding = '6px 12px';
+                        invBtn.onclick = () => {
+                            const pathTileNow = (event.currentTarget || event.target).classList.contains('path');
+                            if ((key === 'firewall' && !pathTileNow) || (key !== 'firewall' && pathTileNow)) {
+                                towerSeletionMenu.remove();
+                                return;
+                            }
+                            const saved = this.takeFromInventory(key);
+                            if (!saved) return;
+                            const name = `${key}_${this.towerArray.length + 1}`;
+                            const t = new Tower(key, name);
+                            t.level = saved.level || t.level;
+                            t.range = saved.range || t.range;
+                            t.damage = saved.damage || t.damage;
+                            if (t.key === 'firewall' || t.key === 'honeypot') {
+                                t.maxHp = saved.maxHp || t.maxHp;
+                                t.hp = saved.maxHp || t.maxHp;
+                            }
+                            t.location = (event.currentTarget || event.target).id;
+                            t.targetingMode = 'first';
+                            this.towerArray.push(t);
+                            (event.currentTarget || event.target).classList.add(key);
+                            (event.currentTarget || event.target).insertAdjacentHTML('beforeend', getImageFor(key, false));
+                            if (key === 'firewall' || key === 'honeypot') {
+                                this.updateStructureHpUI((event.currentTarget || event.target), t, true);
+                            }
+                            this.updateInventoryUI();
+                            towerSeletionMenu.remove();
+                            this.getInRangePathTiles();
+                            this.updateAllRangeHighlights(this.showRanges);
+                            showToast(`${key} placed from inventory`);
+                            this.playSfx('power');
+                        };
+                        towerSeletionMenu.appendChild(invBtn);
+                    });
+                }
+                document.querySelector('#centeredDiv').appendChild(towerSeletionMenu);
+                const rect = (event.currentTarget || event.target).getBoundingClientRect();
+                towerSeletionMenu.style.position = 'absolute';
+                towerSeletionMenu.style.left = (rect.right + 10 + window.scrollX) + 'px';
+                towerSeletionMenu.style.top = (rect.top + window.scrollY) + 'px';
+                towerSeletionMenu.querySelector('.close-btn').addEventListener('click', e => {
+                    towerSeletionMenu.remove();
+                    e.stopPropagation();
+                });
+                setTimeout(() => {
+                    const outsideClick = (e) => {
+                        if (!towerSeletionMenu.contains(e.target)) {
+                            towerSeletionMenu.remove();
+                            document.removeEventListener('mousedown', outsideClick);
+                        }
+                    };
+                    document.addEventListener('mousedown', outsideClick);
+                }, 0);
+            });
+        });
     }
 
     towersAct() {
