@@ -205,6 +205,7 @@ class GameSesion{
         this.paused = false; // pause/resume
         this.difficulty = 'normal'; // easy|normal|hard
         this.baseHP = 900;
+    this.baseMaxHP = 900;
         this.credits = 200;
         this.levelsEnd = true;
         this.levelStart = false;
@@ -214,6 +215,18 @@ class GameSesion{
         this.lastMenuOpenAt = 0; // debounce for tile/menu clicks
         this.undoStack = []; // stack of {tileId, towerKey, price}
         this.stepOnce = false; // when paused, allow advancing one tick
+        // Carry towers between levels
+        this.inventory = []; // array of saved tower states
+        this.pendingInventory = null; // {saved, idx}
+        // Simple SFX registry
+        this.sounds = {
+            power: new Audio('Power_up_3.wav'), // upgrades, placements
+            laser: new Audio('Laser_3.wav'),    // shots
+            hit: new Audio('Hit_3.wav'),        // towers take damage
+            coin: new Audio('Coin_5.wav'),      // level complete
+            boom: new Audio('Explosion_3.wav')  // enemy kill
+        };
+        Object.values(this.sounds).forEach(a=>{ try{ a.volume = 0.35; a.preload = 'auto'; }catch(e){} });
     }
     getEffectiveTick(){
         // Ensure a minimum delay to avoid starving UI
@@ -353,26 +366,18 @@ class GameSesion{
 
     }
     clearGameBoard(){
-        // Remove path and possibleTowerSpot classes
-        while (document.querySelector('.path')) {
-            let el = document.querySelector('.path');
-            if (!el) { break; }
-            el.classList.remove('path');
-        }
-        while (document.querySelector('.possibleTowerSpot')) {
-            let el = document.querySelector('.possibleTowerSpot');
-            if (!el) { break; }
-            el.classList.remove('possibleTowerSpot');
-        }
-        // Remove all tower and threat classes from tiles
+        // Fully clear all tile state and DOM artifacts
         (document.querySelectorAll('td')).forEach(tile => {
-            CYBER_TOWERS.forEach(tower => {
-                tile.classList.remove(tower.key);
-            });
-            CYBER_THREATS.forEach(threat => {
-                tile.classList.remove(threat.key);
-            });
+            // classes
+            tile.classList.remove('path','possibleTowerSpot','range-in-path','highlightCircle');
+            CYBER_TOWERS.forEach(tower => tile.classList.remove(tower.key));
+            CYBER_THREATS.forEach(threat => tile.classList.remove(threat.key));
+            // children
+            tile.querySelectorAll('.enemy, .tower-img, .default-img, .structure-hp, .server-end-of-path-container').forEach(el=>el.remove());
         });
+        // Remove any global overlays/menus
+        document.getElementById('rangeCircleOverlay')?.remove();
+        document.querySelectorAll('#towerSeletionMenu, #towerSellMenu').forEach(m=>m.remove());
         this.pathArray = [];
     }
     levelStartButton(){
@@ -451,6 +456,7 @@ class GameSesion{
                     if (honeypotTile) {
                         this.showDamageIndicator(honeypotTile, dmg, true);
                         this.updateStructureHpUI(honeypotTile, activeHoneypot);
+                        this.playSfx('hit');
                         if (activeHoneypot.hp <= 0) {
                             // Remove structure
                             honeypotTile.classList.remove(activeHoneypot.key);
@@ -472,6 +478,7 @@ class GameSesion{
                     if (fwTile) {
                         this.showDamageIndicator(fwTile, dmg, true);
                         this.updateStructureHpUI(fwTile, firewallOnNext);
+                        this.playSfx('hit');
                         if (firewallOnNext.hp <= 0) {
                             fwTile.classList.remove('firewall');
                             fwTile.querySelectorAll('.tower-img, .default-img, .structure-hp').forEach(el => el.remove());
@@ -497,37 +504,6 @@ class GameSesion{
                     }
                     this.baseHP = this.baseHP - enemy.damage;
                     this.lastKillerEnemy = enemy;
-                    this.removeObject(enemy, this.enemiesArray);
-                    this.defeatedEnemies = (this.defeatedEnemies || 0) + 1;
-                    this.updateEnemiesLeftUI();
-                    this.checkWaveEnd();
-                    return;
-                }
-
-                // Enemy HP check and UI update handled during towersAct()
-                if (enemy.hp <= 0) {
-                    const prevTd = document.getElementById(currentTile);
-                    if (prevTd && prevTd.querySelector(`#${enemy.domId}`)) {
-                        prevTd.removeChild(prevTd.querySelector(`#${enemy.domId}`));
-                    }
-                    document.querySelectorAll(`#${enemy.domId}`).forEach(el => el.remove());
-                    const threatConfig = CYBER_THREATS.find(t => t.key === enemy.key);
-                    this.credits += threatConfig && threatConfig.reward ? threatConfig.reward : 10;
-                    const credEl = document.getElementById('credits');
-                    if (credEl) credEl.textContent = 'Bandwidth: ' + this.credits;
-                    this.removeObject(enemy, this.enemiesArray);
-                    this.defeatedEnemies = (this.defeatedEnemies || 0) + 1;
-                    this.updateEnemiesLeftUI();
-                    this.checkWaveEnd();
-                    return;
-                }
-
-                // Move visual
-                if (currentTile && document.getElementById(currentTile)) {
-                    const prevTd = document.getElementById(currentTile);
-                    if (prevTd && prevTd.querySelector(`#${enemy.domId}`)) {
-                        prevTd.removeChild(prevTd.querySelector(`#${enemy.domId}`));
-                    }
                 }
                 const td = document.getElementById(nextTileId);
                 if (td) {
@@ -596,209 +572,204 @@ class GameSesion{
         } catch(e){ console.log(e); }
     }
 
-    // Continuous loop to let towers fire based on the current tick/speed
-    startTowersLoop() {
-        const loop = () => {
-            try {
+// Continuous loop to let towers fire based on the current tick/speed
+startTowersLoop() {
+    const loop = () => {
+        try {
+            if (this.paused) {
+                // Allow a single tick when stepping
+                if (this.stepOnce) {
+                    this.towersAct();
+                    this.stepOnce = false;
+                }
+            } else {
                 this.towersAct();
-            } catch(e) { console.log(e); }
-            setTimeout(loop, this.getEffectiveTick());
-        };
+            }
+        } catch(e) { console.log(e); }
         setTimeout(loop, this.getEffectiveTick());
-    }
+    };
+    loop();
+}
 
-    // Settings modal for colorblind toggle
-    openSettingsModal(){
-        // Remove existing
-        document.getElementById('settingsModal')?.remove();
-        const modal = document.createElement('dialog');
-        modal.id = 'settingsModal';
-        modal.style.background = '#0f0f1e';
-        modal.style.border = '2px solid var(--border)';
-        modal.style.color = 'var(--text)';
-        modal.style.padding = '16px 18px';
-        modal.style.borderRadius = 'var(--radius-m)';
-        modal.innerHTML = `
-            <h3 style="margin-top:0">Settings</h3>
-            <label style="display:block; margin:8px 0;">
-                <input type="checkbox" id="cbColorblind"> Colorblind-friendly palette
-            </label>
-            <div style="margin-top:14px; display:flex; gap:10px;">
-                <button id="settingsClose">Close</button>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        const cb = modal.querySelector('#cbColorblind');
-        cb.checked = document.body.classList.contains('colorblind');
-        cb.onchange = () => {
-            const on = cb.checked;
-            document.body.classList.toggle('colorblind', on);
-            try { localStorage.setItem('cd_colorblind', String(on)); } catch(e){}
-        };
-        modal.querySelector('#settingsClose').onclick = () => modal.close();
-        if (typeof modal.showModal === 'function') modal.showModal(); else modal.setAttribute('open','');
-    }
+// Settings modal for colorblind toggle
+openSettingsModal(){
+    // Remove existing
+    document.getElementById('settingsModal')?.remove();
+    const modal = document.createElement('dialog');
+    modal.id = 'settingsModal';
+    modal.style.background = '#0f0f1e';
+    modal.style.border = '2px solid var(--border)';
+    modal.style.color = 'var(--text)';
+    modal.style.padding = '16px 18px';
+    modal.style.borderRadius = 'var(--radius-m)';
+    modal.innerHTML = `
+        <h3 style="margin-top:0">Settings</h3>
+        <label style="display:block; margin:8px 0;">
+            <input type="checkbox" id="cbColorblind"> Colorblind-friendly palette
+        </label>
+        <div style="margin-top:14px; display:flex; gap:10px;">
+            <button id="settingsClose">Close</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const cb = modal.querySelector('#cbColorblind');
+    cb.checked = document.body.classList.contains('colorblind');
+    cb.onchange = () => {
+        const on = cb.checked;
+        document.body.classList.toggle('colorblind', on);
+        try { localStorage.setItem('cd_colorblind', String(on)); } catch(e){}
+    };
+    modal.querySelector('#settingsClose').onclick = () => modal.close();
+    if (typeof modal.showModal === 'function') modal.showModal(); else modal.setAttribute('open','');
+}
 
-    buildTowers(){
-        // Remove previous listeners by cloning nodes on both buildable and path tiles
-        document.querySelectorAll(".possibleTowerSpot, .path").forEach(tile => {
-            let newTile = tile.cloneNode(true);
-            tile.parentNode.replaceChild(newTile, tile);
+buildTowers(){
+// Remove previous listeners by cloning nodes on both buildable and path tiles
+document.querySelectorAll(".possibleTowerSpot, .path").forEach(tile => {
+    let newTile = tile.cloneNode(true);
+    tile.parentNode.replaceChild(newTile, tile);
+});
+// Attach listeners to both non-path buildable tiles and path tiles
+document.querySelectorAll(".possibleTowerSpot, .path").forEach(tile => {
+    tile.addEventListener('mouseover', (event) => {
+        // Do not apply hover highlight if tile is part of a persistent range highlight
+        if (!event.target.classList.contains('range-in-path')) {
+            event.target.classList.add("highlightCircle");
+        }
+        // Placement preview: valid/invalid glow
+        const hasTower = this.towerArray.some(t => t.location === event.target.id);
+        const isPath = this.pathArray.includes(event.target.id);
+        if (!hasTower && !isPath) {
+            event.target.classList.add('valid-spot');
+            event.target.classList.remove('invalid-spot');
+        } else {
+            event.target.classList.add('invalid-spot');
+            event.target.classList.remove('valid-spot');
+        }
+        tile.addEventListener("mouseout", e => {
+            // Only remove hover highlight; keep persistent range highlight intact
+            if (!e.target.classList.contains('range-in-path')) {
+                e.target.classList.remove("highlightCircle");
+            } else {
+                // Ensure no hover class lingers even if added previously
+                e.target.classList.remove("highlightCircle");
+            }
+            e.target.classList.remove('valid-spot');
+            e.target.classList.remove('invalid-spot');
+        }, { once: true });
+        // Drag-over preview: show valid/invalid when dragging an inventory item
+        tile.addEventListener('dragover', (e) => {
+            try{
+                const idxText = e.dataTransfer.getData('text/plain');
+                if (idxText === null || idxText === undefined || idxText === '') { return; }
+                e.preventDefault(); // allow drop
+                const idx = parseInt(idxText, 10);
+                const saved = isNaN(idx) ? null : this.inventory[idx];
+                if (!saved) return;
+                const isPath = tile.classList.contains('path');
+                const valid = (saved.key === 'firewall' && isPath) || (saved.key !== 'firewall' && !isPath);
+                tile.classList.toggle('valid-spot', !!valid);
+                tile.classList.toggle('invalid-spot', !valid);
+            }catch(err){}
         });
-        // Attach listeners to both non-path buildable tiles and path tiles
-        document.querySelectorAll(".possibleTowerSpot, .path").forEach(tile => {
-            tile.addEventListener("mouseover", event => {
-                // Do not apply hover highlight if tile is part of a persistent range highlight
-                if (!event.target.classList.contains('range-in-path')) {
-                    event.target.classList.add("highlightCircle");
-                }
-                // Placement preview: valid/invalid glow
-                const hasTower = this.towerArray.some(t => t.location === event.target.id);
-                const isPath = this.pathArray.includes(event.target.id);
-                if (!hasTower && !isPath) {
-                    event.target.classList.add('valid-spot');
-                    event.target.classList.remove('invalid-spot');
-                } else {
-                    event.target.classList.add('invalid-spot');
-                    event.target.classList.remove('valid-spot');
-                }
-                tile.addEventListener("mouseout", e => {
-                    // Only remove hover highlight; keep persistent range highlight intact
-                    if (!e.target.classList.contains('range-in-path')) {
-                        e.target.classList.remove("highlightCircle");
-                    } else {
-                        // Ensure no hover class lingers even if added previously
-                        e.target.classList.remove("highlightCircle");
+        tile.addEventListener('dragleave', () => {
+            tile.classList.remove('valid-spot');
+            tile.classList.remove('invalid-spot');
+        });
+        tile.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const idxText = e.dataTransfer.getData('text/plain');
+                const idx = parseInt(idxText, 10);
+                const saved = isNaN(idx) ? null : this.inventory[idx];
+                if (!saved) return;
+                const ok = this.placeSavedTowerAt(saved, tile);
+                // Clear classes
+                tile.classList.remove('valid-spot');
+                tile.classList.remove('invalid-spot');
+                if (ok) {
+                    this.removeInventoryAt(idx);
+                    this.pendingInventory = null;
+                    this.updateInventoryUI();
                     }
-                    e.target.classList.remove('valid-spot');
-                    e.target.classList.remove('invalid-spot');
-                }, { once: true });
                 event.target.addEventListener("click", tileSection => {
-                    // Input debounce to prevent double opens
-                    const now = Date.now();
-                    if (now - this.lastMenuOpenAt < 150) { return; }
-                    this.lastMenuOpenAt = now;
-                    // Remove any existing menu first
-                    document.querySelectorAll("#towerSeletionMenu, #towerSellMenu").forEach(menu => menu.remove());
-                    // Check if a tower is already built here
-                    const existingTower = this.towerArray.find(t => t.location === event.target.id);
+                    // if menu for different tile opened, close that menu
+                    if (document.querySelector("#towerSeletionMenu")){
+                        document.querySelector("#towerSeletionMenu").remove();
+                    }
+                    // If placing from inventory (armed), try to place and exit
+                    if (this.pendingInventory) {
+                        const ok = this.placeSavedTowerAt(this.pendingInventory.saved, event.target);
+                        if (ok) {
+                            this.removeInventoryAt(this.pendingInventory.idx);
+                            this.pendingInventory = null;
+                            this.updateInventoryUI();
+                        }
+                        event.stopPropagation();
+                        event.preventDefault();
+                        return;
+                    }
+                    // If tile already has a tower, open the sell/upgrade menu
+                    const tileEl = event.currentTarget || event.target;
+                    const tileId = tileEl && tileEl.id ? tileEl.id : event.target.id;
+                    const existingTower = this.towerArray.find(t => t.location === tileId);
                     if (existingTower) {
-                        // Show custom upgrade/sell menu
-                        const towerConfig = CYBER_TOWERS.find(t => t.key === existingTower.key);
-                        const sellValue = Math.floor(towerConfig.price / 2);
-                        let sellMenu = document.createElement("menu");
-                        sellMenu.id = "towerSellMenu";
+                        // Close any other menu
+                        document.querySelector('#towerSellMenu')?.remove();
+                        const sellMenu = document.createElement('div');
+                        sellMenu.id = 'towerSellMenu';
                         sellMenu.style.background = '#0f0f1e';
+                        sellMenu.style.border = '2px solid #00fff7';
+                        sellMenu.style.borderRadius = '8px';
+                        sellMenu.style.color = '#00fff7';
+                        sellMenu.style.padding = '8px 12px';
+                        sellMenu.style.position = 'absolute';
                         sellMenu.innerHTML = "<button class='close-btn' title='Close'>&#10006;</button>";
-                        let info = document.createElement("div");
-                        info.style.margin = '8px 0';
-                        info.innerHTML = getImageFor(towerConfig.key, false) + ' <b>' + towerConfig.name + '</b><br>' +
-                                         'Level: ' + existingTower.level + ' | Range: ' + existingTower.range + ' | Damage: ' + existingTower.damage;
+                        // Info
+                        const towerConfig = CYBER_TOWERS.find(tw => tw.key === existingTower.key) || { name: existingTower.key };
+                        const info = document.createElement('div');
+                        info.style.margin = '6px 0';
+                        info.innerHTML = getImageFor(existingTower.key, false) + ' <b>' + (towerConfig.name || existingTower.key) + '</b><br>' +
+                                         `Level: ${existingTower.level} | Range: ${existingTower.range} | Damage: ${existingTower.damage}`;
                         sellMenu.appendChild(info);
-                        // Show range highlights on path tiles
-                        this.highlightTowerRange(existingTower, true);
-                        // Also show a circular overlay to visualize range around the selected tower
-                        this.showRangeCircle(existingTower, true);
-                        // Targeting mode selector
-                        const modeWrap = document.createElement('div');
-                        modeWrap.style.marginTop = '6px';
-                        const modeLabel = document.createElement('label');
-                        modeLabel.textContent = 'Targeting: ';
-                        const modeSelect = document.createElement('select');
-                        ['first','last','strongest','closest'].forEach(m => {
-                            const opt = document.createElement('option');
-                            opt.value = m; opt.textContent = m;
-                            modeSelect.appendChild(opt);
-                        });
-                        modeSelect.value = existingTower.targetingMode || 'first';
-                        modeSelect.onchange = () => { existingTower.targetingMode = modeSelect.value; showToast('Targeting: ' + modeSelect.value); };
-                        modeWrap.appendChild(modeLabel);
-                        modeWrap.appendChild(modeSelect);
-                        sellMenu.appendChild(modeWrap);
-
                         // Upgrade button
-                        let upBtn = document.createElement("button");
+                        const upBtn = document.createElement('button');
                         upBtn.textContent = `Upgrade (+30% dmg${(existingTower.level+1)%2===0?', +1 range':''}) - ${existingTower.getUpgradeCost()}`;
                         upBtn.style.background = '#181828';
                         upBtn.style.color = '#00fff7';
                         upBtn.style.border = '2px solid #00fff7';
                         upBtn.style.borderRadius = '6px';
-                        upBtn.style.fontSize = '1.1em';
-                        upBtn.style.margin = '8px 0';
-                        upBtn.style.padding = '6px 18px';
-                        upBtn.style.cursor = 'pointer';
-                        upBtn.addEventListener('click', () => {
-                            if (game1.credits >= existingTower.getUpgradeCost()) {
-                                game1.credits -= existingTower.getUpgradeCost();
+                        upBtn.style.fontSize = '1.0em';
+                        upBtn.style.margin = '6px 0';
+                        upBtn.style.padding = '6px 12px';
+                        upBtn.onclick = () => {
+                            if (this.credits >= existingTower.getUpgradeCost()) {
+                                this.credits -= existingTower.getUpgradeCost();
                                 existingTower.applyUpgrade();
-                                // Recompute in-range tiles after range change
-                                game1.getInRangePathTiles();
-                                game1.updateHUD();
-                                // Refresh menu info
-                                info.innerHTML = getImageFor(towerConfig.key, false) + ' <b>' + towerConfig.name + '</b><br>' +
-                                                 'Level: ' + existingTower.level + ' | Range: ' + existingTower.range + ' | Damage: ' + existingTower.damage;
-                                const newCost = existingTower.getUpgradeCost();
-                                upBtn.textContent = `Upgrade (+30% dmg${(existingTower.level+1)%2===0?', +1 range':''}) - ${newCost}`;
-                                // Refresh global range highlights if enabled
-                                game1.updateAllRangeHighlights(game1.showRanges);
+                                this.getInRangePathTiles();
+                                this.updateHUD();
+                                // Refresh info and next cost
+                                info.innerHTML = getImageFor(existingTower.key, false) + ' <b>' + (towerConfig.name || existingTower.key) + '</b><br>' +
+                                                 `Level: ${existingTower.level} | Range: ${existingTower.range} | Damage: ${existingTower.damage}`;
+                                upBtn.textContent = `Upgrade (+30% dmg${(existingTower.level+1)%2===0?', +1 range':''}) - ${existingTower.getUpgradeCost()}`;
+                                this.updateAllRangeHighlights(this.showRanges);
                                 showToast('Upgraded');
+                                this.playSfx('power');
                             } else {
                                 upBtn.style.color = 'red';
                             }
-                        });
+                        };
                         sellMenu.appendChild(upBtn);
-                        let sellBtn = document.createElement("button");
-                        sellBtn.textContent = `Sell`;
-                        sellBtn.style.background = '#181828';
-                        sellBtn.style.color = '#00fff7';
-                        sellBtn.style.border = '2px solid #00fff7';
-                        sellBtn.style.borderRadius = '6px';
-                        sellBtn.style.fontSize = '1.1em';
-                        sellBtn.style.margin = '8px 0';
-                        sellBtn.style.padding = '6px 18px';
-                        sellBtn.style.cursor = 'pointer';
-                        sellBtn.addEventListener('click', () => {
-                            // Remove tower from array and its image from the tile
-                            this.towerArray = this.towerArray.filter(t => t !== existingTower);
-                            event.target.classList.remove(existingTower.key);
-                            // Remove any tower visuals
-                            event.target.querySelectorAll('.tower-img, .default-img, .structure-hp').forEach(el => el.remove());
-                            this.credits += sellValue;
-                            this.updateHUD();
-                            sellMenu.remove();
-                            // Refresh global range highlights if enabled
-                            this.updateAllRangeHighlights(this.showRanges);
-                            showToast('Sold');
-                        });
-                        sellMenu.appendChild(sellBtn);
                         document.querySelector('#centeredDiv').appendChild(sellMenu);
-                        // Position menu near the tile
-                        let rect = event.target.getBoundingClientRect();
-                        sellMenu.style.position = "absolute";
+                        // Position near tile
+                        const rect = tileEl.getBoundingClientRect();
                         sellMenu.style.left = (rect.right + 10 + window.scrollX) + 'px';
                         sellMenu.style.top = (rect.top + window.scrollY) + 'px';
-                        // Close button
-                        sellMenu.querySelector('.close-btn').addEventListener('click', e => {
-                            sellMenu.remove();
-                            this.highlightTowerRange(existingTower, false);
-                            this.showRangeCircle(existingTower, false);
-                            e.stopPropagation();
-                        });
-                        // Dismiss menu when clicking outside
-                        setTimeout(() => {
-                          const outsideClick = (e) => {
-                            if (!sellMenu.contains(e.target)) {
-                              sellMenu.remove();
-                              this.highlightTowerRange(existingTower, false);
-                              this.showRangeCircle(existingTower, false);
-                              document.removeEventListener('mousedown', outsideClick);
-                            }
-                          };
-                          document.addEventListener('mousedown', outsideClick);
-                        }, 0);
+                        sellMenu.querySelector('.close-btn').addEventListener('click', e => { sellMenu.remove(); e.stopPropagation(); });
+                        event.stopPropagation();
                         return;
                     }
-                    let towerSeletionMenu = document.createElement('menu');
+                    // Create Selection menu and add it to dom next to tile
+                    let towerSeletionMenu = document.createElement("div");
                     towerSeletionMenu.id = "towerSeletionMenu";
                     towerSeletionMenu.style.background = '#0f0f1e';
                     towerSeletionMenu.innerHTML = "<button class='close-btn' title='Close'>&#10006;</button>";
@@ -806,10 +777,63 @@ class GameSesion{
                     // Determine allowed towers based on tile type
                     const isPathTile = event.target.classList.contains('path');
                     const allowedTowers = CYBER_TOWERS.filter(tw => isPathTile ? (tw.key === 'firewall') : (tw.key !== 'firewall'));
+                    const baseTileEl = event.currentTarget || event.target;
                     allowedTowers.forEach(tower => {
                         let towerType = document.createElement("button");
                         towerType.innerHTML = `<b>${tower.name}</b> — ${tower.price}<br><small>Range: ${tower.range} | Damage: ${tower.damage}</small>`;
                         towerType.title = tower.name + "\nRange: " + tower.range + "  Damage: " + tower.damage + "\nSpecial: " + (tower.special || '-');
+                        // Hover preview: show icon in tile and highlight estimated range
+                        towerType.addEventListener('mouseenter', () => {
+                            try {
+                                const previewId = 'hoverTowerPreview';
+                                // Icon in the tile
+                                if (!baseTileEl.querySelector('#'+previewId)) {
+                                    const wrap = document.createElement('div');
+                                    wrap.id = previewId;
+                                    wrap.style.position = 'absolute';
+                                    wrap.style.left = '50%';
+                                    wrap.style.top = '50%';
+                                    wrap.style.transform = 'translate(-50%, -50%)';
+                                    wrap.style.pointerEvents = 'none';
+                                    wrap.innerHTML = getImageFor(tower.key, false);
+                                    baseTileEl.style.position = baseTileEl.style.position || 'relative';
+                                    baseTileEl.appendChild(wrap);
+                                }
+                                // Build a temporary tower object to reuse highlight APIs
+                                const temp = { key: tower.key, range: tower.range, location: baseTileEl.id, inRangePathTiles: [] };
+                                // compute inRange similar to getInRangePathTiles
+                                const toRC = (id) => {
+                                    try{
+                                        const row = parseInt(id.replace(/[^0-9].*$/,'') || '0', 10);
+                                        const letter = id.replace(/^\d+/,'').charAt(0);
+                                        const col = letter ? (letter.charCodeAt(0) - 96) : 0;
+                                        return { r: row, c: col };
+                                    } catch { return { r:0, c:0 }; }
+                                };
+                                const dist = (a,b) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
+                                const tRC = toRC(baseTileEl.id);
+                                const tiles = [];
+                                (this.pathArray || []).forEach(pid => {
+                                    if (pid === 'base') return;
+                                    const pRC = toRC(pid);
+                                    if (dist(tRC, pRC) <= (tower.range || 1)) tiles.push(pid);
+                                });
+                                temp.inRangePathTiles = tiles;
+                                // Show overlays
+                                this.highlightTowerRange(temp, true);
+                                this.showRangeCircle(temp, true);
+                            } catch(e) { console.log(e); }
+                        });
+                        towerType.addEventListener('mouseleave', () => {
+                            try {
+                                baseTileEl.querySelector('#hoverTowerPreview')?.remove();
+                                // remove overlays
+                                this.highlightTowerRange({ inRangePathTiles: (this.pathArray||[]) }, false);
+                                this.showRangeCircle(null, false);
+                                // If global ranges are on, reapply them
+                                this.updateAllRangeHighlights(this.showRanges);
+                            } catch(e) { console.log(e); }
+                        });
                         towerType.style.background = '#181828';
                         towerType.style.color = '#00fff7';
                         towerType.style.border = '2px solid #00fff7';
@@ -818,13 +842,6 @@ class GameSesion{
                         towerType.style.margin = '8px 0';
                         towerType.style.padding = '6px 18px';
                         towerType.style.cursor = 'pointer';
-                        // Preview the range circle for this tower on hover (using the clicked tile position)
-                        towerType.addEventListener('mouseenter', () => {
-                            this.showRangeCircle({ location: event.target.id, range: tower.range }, true);
-                        });
-                        towerType.addEventListener('mouseleave', () => {
-                            this.showRangeCircle(null, false);
-                        });
                         towerType.addEventListener("click", purchaseClick => {
                             // Prevent building if already a tower here
                             if (this.towerArray.find(t => t.location === event.target.id)) {
@@ -857,6 +874,7 @@ class GameSesion{
                                 // Refresh global range highlights if enabled
                                 this.updateAllRangeHighlights(this.showRanges);
                                 showToast(`${tower.name} deployed`);
+                                this.playSfx('power');
                                 // Push to undo stack
                                 try { this.undoStack.push({ tileId: event.target.id, towerKey: tower.key, price: tower.price }); } catch(e){}
                             } else {
@@ -865,6 +883,66 @@ class GameSesion{
                         }, { once: true });
                         towerSeletionMenu.appendChild(towerType);
                     });
+                    // Inventory placement options
+                    if ((this.inventory || []).length > 0) {
+                        const sep = document.createElement('div');
+                        sep.style.margin = '6px 0';
+                        sep.style.borderTop = '1px dashed rgba(0,255,247,0.3)';
+                        towerSeletionMenu.appendChild(sep);
+                        const invLabel = document.createElement('div');
+                        invLabel.textContent = 'From Inventory:';
+                        invLabel.style.marginTop = '6px';
+                        towerSeletionMenu.appendChild(invLabel);
+                        // Group available by key
+                        const byKey = {};
+                        this.inventory.forEach(t => { byKey[t.key] = (byKey[t.key] || 0) + 1; });
+                        Object.keys(byKey).forEach(key => {
+                            const invBtn = document.createElement('button');
+                            invBtn.textContent = `${key} x${byKey[key]} (free)`;
+                            invBtn.style.background = '#181828';
+                            invBtn.style.color = '#00fff7';
+                            invBtn.style.border = '2px solid #00fff7';
+                            invBtn.style.borderRadius = '6px';
+                            invBtn.style.fontSize = '1.0em';
+                            invBtn.style.margin = '6px 0';
+                            invBtn.style.padding = '6px 12px';
+                            invBtn.onclick = () => {
+                                // Enforce placement rules
+                                const pathTileNow = event.target.classList.contains('path');
+                                if ((key === 'firewall' && !pathTileNow) || (key !== 'firewall' && pathTileNow)) {
+                                    towerSeletionMenu.remove();
+                                    return;
+                                }
+                                const saved = this.takeFromInventory(key);
+                                if (!saved) return;
+                                // Place saved tower with its stats
+                                const name = `${key}_${this.towerArray.length + 1}`;
+                                const t = new Tower(key, name);
+                                t.level = saved.level || t.level;
+                                t.range = saved.range || t.range;
+                                t.damage = saved.damage || t.damage;
+                                if (t.key === 'firewall' || t.key === 'honeypot') {
+                                    t.maxHp = saved.maxHp || t.maxHp;
+                                    t.hp = saved.maxHp || t.maxHp;
+                                }
+                                t.location = event.target.id;
+                                t.targetingMode = 'first';
+                                this.towerArray.push(t);
+                                event.target.classList.add(key);
+                                event.target.insertAdjacentHTML('beforeend', getImageFor(key, false));
+                                if (key === 'firewall' || key === 'honeypot') {
+                                    this.updateStructureHpUI(event.target, t, true);
+                                }
+                                this.updateInventoryUI();
+                                towerSeletionMenu.remove();
+                                this.getInRangePathTiles();
+                                this.updateAllRangeHighlights(this.showRanges);
+                                showToast(`${key} placed from inventory`);
+                                this.playSfx('power');
+                            };
+                            towerSeletionMenu.appendChild(invBtn);
+                        });
+                    }
                     document.querySelector('#centeredDiv').appendChild(towerSeletionMenu);
                     // Position menu near the tile
                     let rect = event.target.getBoundingClientRect();
@@ -896,7 +974,7 @@ class GameSesion{
             // When paused, only act if stepping once
             if (this.paused && !this.stepOnce) { return; }
             // For each offensive tower (exclude structures)
-            const offensiveTowers = this.towerArray.filter(t => t.key !== 'firewall' && t.key !== 'honeypot');
+            const offensiveTowers = this.towerArray.filter(t => /* firewall now attacks */ t.key !== 'honeypot');
             offensiveTowers.forEach(tower => {
                 if (!tower.inRangePathTiles || tower.inRangePathTiles.length === 0) { return; }
                 const inRangeEnemies = this.enemiesArray.filter(e => e && e.hp > 0 && tower.inRangePathTiles.includes(e.location));
@@ -922,6 +1000,7 @@ class GameSesion{
                 if (!target) { return; }
                 // Visual: draw a quick beam line from tower tile to target tile (non-blocking)
                 try { this.showBeam(tower.location, target.location); } catch(e) { /* ignore visual errors */ }
+                this.playSfx('laser');
 
                 // Apply damage
                 const dmg = Math.max(1, tower.damage);
@@ -939,6 +1018,7 @@ class GameSesion{
                     this.showDamageIndicator(targetTile, dmg, false);
                     // On death, mark for cleanup (moveEnemy will finalize on next step); also remove from DOM now
                     if (target.hp <= 0) {
+                        this.playSfx('boom');
                         enemyEl.remove();
                     }
                 }
@@ -948,6 +1028,19 @@ class GameSesion{
         } catch(e){ console.log(e); }
     }
 
+    // Play a short sound effect by key name in this.sounds
+    playSfx(name){
+        try {
+            if (this.mute) return;
+            const a = (this.sounds || {})[name];
+            if (!a) return;
+            // Quick retrigger
+            a.currentTime = 0;
+            const p = a.play();
+            if (p && typeof p.catch === 'function') p.catch(()=>{});
+        } catch(e){}
+    }
+
     // Pause helpers
     togglePause(){
         this.paused = !this.paused;
@@ -955,8 +1048,8 @@ class GameSesion{
     }
     stepForward(){
         if (!this.paused) { return; }
+        // Signal one-tick advance; loops (towers/enemies) will consume it
         this.stepOnce = true;
-        try { this.towersAct(); } catch(e){}
     }
 
     // Floating damage numbers; isStructure toggles color/style
@@ -1034,15 +1127,37 @@ class GameSesion{
     }
 
     levelComplete() {
-        this.clearGameBoard(); // needs work
-        this.removeAllEnemiesFromDOM(); // Remove any stray enemies/icons
+        // Pick up all existing towers into inventory (preserve stats)
+        try {
+            (this.towerArray || []).forEach(t => {
+                // clone lightweight state
+                this.inventory.push({
+                    key: t.key,
+                    level: t.level,
+                    range: t.range,
+                    damage: t.damage,
+                    maxHp: t.maxHp,
+                    hp: t.maxHp // restore structures for next level
+                });
+                // remove visuals from grid
+                const td = document.getElementById(t.location);
+                if (td) {
+                    td.classList.remove(t.key);
+                    td.querySelectorAll('.tower-img, .default-img, .structure-hp').forEach(el=>el.remove());
+                }
+            });
+        } catch(e) { console.log(e); }
+        this.towerArray = [];
+        this.clearGameBoard();
+        this.removeAllEnemiesFromDOM();
         this.currentLevel++;
         this.generateLevel();
-        this.buildTowers(); // Re-attach listeners after grid is rebuilt
+        this.buildTowers();
         this.baseHP = 900;
         this.credits = +(this.currentLevel * 100);
         this.levelsEnd = false;
         this.levelStart = false;
+        this.updateInventoryUI();
         console.log('new level');
     }
     // Utility: remove all stray .enemy and .default-img elements from DOM
@@ -1073,6 +1188,7 @@ class GameSesion{
         <div style='margin: 12px 0;'>Bandwidth Earned: <b>${stats.bandwidthEarned}</b></div>
         <button id='nextLevelBtn' style='margin-top:18px; background:#181828; color:#00fff7; border:2px solid #00fff7; border-radius:6px; font-size:1.2em; padding:8px 24px; cursor:pointer;'>Next Level</button>`;
       document.body.appendChild(dialog);
+      this.playSfx('coin');
       document.getElementById('nextLevelBtn').onclick = () => {
         dialog.remove();
         this.levelComplete();
@@ -1130,7 +1246,7 @@ class GameSesion{
         try {
             const root = document.getElementById('centeredDiv');
             if (!root) return;
-            // HUD row (credits, hp, enemies left)
+            // HUD row (tokens, hp bar + text, enemies left)
             let hud = document.getElementById('hudBar');
             if (!hud) {
                 hud = document.createElement('div');
@@ -1139,7 +1255,13 @@ class GameSesion{
                 hud.style.gap = '16px';
                 hud.style.alignItems = 'center';
                 hud.style.margin = '10px 0';
-                hud.innerHTML = "<span id='credits'></span><span id='baseHP'></span><span id='enemiesLeft'></span>";
+                hud.innerHTML = "<span id='credits'></span>" +
+                                "<div id='serverHpBar' style=\"position:relative;width:220px;height:14px;border:2px solid #00fff7;border-radius:8px;overflow:hidden;background:#111526\">" +
+                                  "<div id='serverHpFill' style=\"height:100%;width:100%;background:#2ecc71;transition:width 0.2s ease\"></div>" +
+                                  "<div id='serverHpLabel' style=\"position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:11px;pointer-events:none;color:#fff;opacity:0.85\">Server HP</div>" +
+                                "</div>" +
+                                "<span id='baseHP'></span>" +
+                                "<span id='enemiesLeft'></span>";
                 root.appendChild(hud);
             }
             // Ensure a side-by-side container exists for the grid and the enemy legend
@@ -1178,13 +1300,29 @@ class GameSesion{
                 panel.style.margin = '0';
                 container.appendChild(panel);
             }
+            // Inventory bar
+            if (!document.getElementById('inventoryBar')){
+                const inv = document.createElement('div');
+                inv.id = 'inventoryBar';
+                inv.style.margin = '10px 0';
+                inv.style.background = '#0f0f1e';
+                inv.style.border = '2px solid #00fff7';
+                inv.style.borderRadius = '8px';
+                inv.style.padding = '8px 12px';
+                inv.style.color = '#00fff7';
+                inv.textContent = 'Inventory: (empty)';
+                root.appendChild(inv);
+            }
             // Controls wiring
             const speedSel = document.getElementById('speedSelect');
             if (speedSel) speedSel.onchange = () => { this.speedMultiplier = parseFloat(speedSel.value || '1') || 1; };
             const pauseBtn = document.getElementById('pauseBtn');
             if (pauseBtn) pauseBtn.onclick = () => this.togglePause();
             const muteTgl = document.getElementById('muteToggle');
-            if (muteTgl) muteTgl.onchange = () => { this.mute = !!muteTgl.checked; };
+            if (muteTgl) muteTgl.onchange = () => { 
+                this.mute = !!muteTgl.checked; 
+                try { Object.values(this.sounds).forEach(a => a.muted = this.mute); } catch(e){}
+            };
             const rangesTgl = document.getElementById('showRangesToggle');
             if (rangesTgl) rangesTgl.onchange = () => { this.showRanges = !!rangesTgl.checked; this.updateAllRangeHighlights(this.showRanges); };
             const settingsBtn = document.getElementById('settingsBtn');
@@ -1198,6 +1336,7 @@ class GameSesion{
             this.levelStartButton();
             // Start towers firing loop
             this.startTowersLoop();
+            this.updateInventoryUI();
         } catch(e){ console.log(e); }
     }
 
@@ -1205,9 +1344,25 @@ class GameSesion{
     updateHUD(){
         try {
             const credEl = document.getElementById('credits');
-            if (credEl) credEl.textContent = 'Bandwidth: ' + this.credits;
+            if (credEl) credEl.textContent = 'Tokens: ' + this.credits;
+            // textual HP
             const hpEl = document.getElementById('baseHP');
-            if (hpEl) hpEl.textContent = 'Server HP: ' + this.baseHP;
+            if (hpEl) {
+                const maxHp = this.baseMaxHP || 900;
+                hpEl.textContent = 'Server HP: ' + this.baseHP + ' / ' + maxHp;
+            }
+            // bar fill and color
+            const bar = document.getElementById('serverHpBar');
+            const fill = document.getElementById('serverHpFill');
+            if (bar && fill) {
+                const maxHp = this.baseMaxHP || 900;
+                const pct = Math.max(0, Math.min(100, Math.round((this.baseHP / maxHp) * 100)));
+                fill.style.width = pct + '%';
+                // color by thresholds
+                if (pct > 60) fill.style.background = '#2ecc71';
+                else if (pct > 30) fill.style.background = '#f1c40f';
+                else fill.style.background = '#e74c3c';
+            }
         } catch(e){ console.log(e); }
     }
 
@@ -1243,6 +1398,185 @@ class GameSesion{
             });
             t.giveInRangePathTiles(tiles);
         });
+    }
+
+    // --- Inventory UI and helpers ---
+    updateInventoryUI(){
+        try{
+            const inv = document.getElementById('inventoryBar');
+            if (!inv) return;
+            inv.innerHTML = '';
+            // Header
+            const title = document.createElement('div');
+            title.innerHTML = '<b>Inventory</b>';
+            title.style.marginBottom = '6px';
+            inv.appendChild(title);
+            if (!this.inventory || this.inventory.length === 0) {
+                const empty = document.createElement('div');
+                empty.textContent = '(empty)';
+                empty.style.opacity = '0.7';
+                inv.appendChild(empty);
+                return;
+            }
+            // Grid container
+            const grid = document.createElement('div');
+            grid.style.display = 'flex';
+            grid.style.flexWrap = 'wrap';
+            grid.style.gap = '8px';
+            inv.appendChild(grid);
+            // One icon per saved item
+            this.inventory.forEach((item, idx) => {
+                grid.appendChild(this.createInventoryIcon(item, idx));
+            });
+        } catch(e){ console.log(e); }
+    }
+    computeQuality(saved){
+        try{
+            const cfg = CYBER_TOWERS.find(c => c.key === saved.key) || { damage: 1, range: 1 };
+            const dmgRatio = Math.max(0.5, Math.min(2.5, (saved.damage || cfg.damage) / (cfg.damage || 1)));
+            const rangeDelta = (saved.range || cfg.range) - (cfg.range || 0);
+            let q = Math.round((dmgRatio * 2 + rangeDelta * 0.75) );
+            q = Math.max(1, Math.min(5, q));
+            return q;
+        } catch(e){ return 1; }
+    }
+    createInventoryIcon(saved, idx){
+        const wrap = document.createElement('div');
+        wrap.style.position = 'relative';
+        wrap.style.width = '42px';
+        wrap.style.height = '42px';
+        wrap.style.border = '2px solid #00fff7';
+        wrap.style.borderRadius = '6px';
+        wrap.style.background = '#111526';
+        wrap.style.display = 'flex';
+        wrap.style.alignItems = 'center';
+        wrap.style.justifyContent = 'center';
+        wrap.title = `${saved.key}\nLv ${saved.level||1}`;
+        // Drag support
+        wrap.setAttribute('draggable', 'true');
+        wrap.dataset.invIndex = String(idx);
+        wrap.addEventListener('dragstart', (e) => {
+            try {
+                e.dataTransfer.setData('text/plain', String(idx));
+                e.dataTransfer.effectAllowed = 'copyMove';
+            } catch(err) {}
+            // Also set global pending to improve UX feedback
+            this.pendingInventory = { saved, idx };
+            // Clear previous selections
+            document.querySelectorAll('#inventoryBar .inv-selected').forEach(el=>{
+                el.classList.remove('inv-selected');
+                el.style.boxShadow='';
+                el.style.background = '#111526';
+                el.style.borderColor = '#00fff7';
+                el.style.transform = '';
+            });
+            // Apply selected styles
+            wrap.classList.add('inv-selected');
+            wrap.style.boxShadow = '0 0 12px #ff00ea, 0 0 4px #00fff7';
+            wrap.style.background = '#1b2140';
+            wrap.style.borderColor = '#ff00ea';
+            wrap.style.transform = 'scale(1.05)';
+        });
+        wrap.addEventListener('dragend', () => {
+            // Clear highlight, keep pending only if not placed
+            wrap.style.boxShadow = '';
+            wrap.style.transform = '';
+        });
+        // Icon
+        try {
+            const html = getImageFor(saved.key, true) || '';
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            const img = temp.querySelector('img') || temp.firstElementChild;
+            if (img) {
+                img.style.maxWidth = '32px';
+                img.style.maxHeight = '32px';
+                img.classList.add('inv-icon');
+                // Strip large glow classes if any
+                img.style.filter = 'drop-shadow(0 0 2px #00fff7)';
+                wrap.appendChild(img);
+            } else {
+                wrap.textContent = saved.key.slice(0,2).toUpperCase();
+            }
+        } catch(e){ wrap.textContent = saved.key.slice(0,2).toUpperCase(); }
+        // Badges
+        const badgeStyle = (corner) => {
+            const s = document.createElement('div');
+            s.style.position = 'absolute';
+            s.style.fontSize = '10px';
+            s.style.lineHeight = '10px';
+            s.style.padding = '2px 3px';
+            s.style.background = 'rgba(0,255,247,0.85)';
+            s.style.color = '#0b0f1c';
+            s.style.borderRadius = '3px';
+            s.style.fontWeight = '700';
+            if (corner === 'bl') { s.style.left = '2px'; s.style.bottom = '2px'; }
+            if (corner === 'br') { s.style.right = '2px'; s.style.bottom = '2px'; }
+            return s;
+        };
+        const lv = badgeStyle('br'); lv.textContent = `Lv ${saved.level||1}`; wrap.appendChild(lv);
+        // Click to arm placement of this exact saved tower
+        wrap.style.cursor = 'pointer';
+        wrap.onclick = () => {
+            this.pendingInventory = { saved, idx };
+            // Visual selection outline
+            document.querySelectorAll('#inventoryBar .inv-selected').forEach(el=>{ 
+                el.classList.remove('inv-selected'); 
+                el.style.boxShadow='';
+                el.style.background = '#111526';
+                el.style.borderColor = '#00fff7';
+                el.style.transform = '';
+            });
+            wrap.classList.add('inv-selected');
+            wrap.style.boxShadow = '0 0 12px #ff00ea, 0 0 4px #00fff7';
+            wrap.style.background = '#1b2140';
+            wrap.style.borderColor = '#ff00ea';
+            wrap.style.transform = 'scale(1.05)';
+            showToast(`Select a valid tile for ${saved.key}`);
+        };
+        return wrap;
+    }
+    removeInventoryAt(idx){
+        if (!this.inventory) return;
+        if (idx < 0 || idx >= this.inventory.length) return;
+        this.inventory.splice(idx, 1);
+    }
+    placeSavedTowerAt(saved, tileEl){
+        if (!saved || !tileEl) return false;
+        const key = saved.key;
+        const pathTileNow = tileEl.classList.contains('path');
+        // Enforce placement rules
+        if ((key === 'firewall' && !pathTileNow) || (key !== 'firewall' && pathTileNow)) {
+            showToast('Invalid placement spot for ' + key);
+            return false;
+        }
+        if (this.towerArray.find(t => t.location === tileEl.id)) { return false; }
+        const name = `${key}_${this.towerArray.length + 1}`;
+        const t = new Tower(key, name);
+        t.level = saved.level || t.level;
+        t.range = saved.range || t.range;
+        t.damage = saved.damage || t.damage;
+        if (t.key === 'firewall' || t.key === 'honeypot') {
+            t.maxHp = saved.maxHp || t.maxHp;
+            t.hp = saved.maxHp || t.maxHp;
+        }
+        t.location = tileEl.id;
+        t.targetingMode = 'first';
+        this.towerArray.push(t);
+        tileEl.classList.add(key);
+        tileEl.insertAdjacentHTML('beforeend', getImageFor(key, false));
+        if (key === 'firewall' || key === 'honeypot') {
+            this.updateStructureHpUI(tileEl, t, true);
+        }
+        this.getInRangePathTiles();
+        this.updateAllRangeHighlights(this.showRanges);
+        this.playSfx('power');
+        return true;
+    }
+    takeFromInventory(key){
+        const idx = this.inventory.findIndex(t => t.key === key);
+        if (idx === -1) return null;
+        return this.inventory.splice(idx,1)[0] || null;
     }
 
     // Draw/clear a circular overlay representing a tower's range
@@ -1385,6 +1719,15 @@ function closeOpenMenus(){
 }
 
 let game1 = new GameSesion();
+// Apply saved colorblind preference before starting the game
+try {
+  const savedCb = localStorage.getItem('cd_colorblind');
+  if (savedCb === 'true') {
+    document.body.classList.add('colorblind');
+  } else {
+    document.body.classList.remove('colorblind');
+  }
+} catch(e) { /* ignore storage errors */ }
 game1.gameStart();
 console.log('script loaded');
 

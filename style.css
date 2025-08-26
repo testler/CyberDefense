@@ -3,22 +3,34 @@
 }
 /* Colorblind-friendly palette toggle */
 body.colorblind {
+    /* Softer, high-contrast set for visibility */
     --primary:#00bcd4; /* teal */
-    --accent:#ff9800;  /* orange */
-    --success:#4caf50;
-    --warning:#ffc107;
-    --danger:#f44336;
+    --accent:#f06292;  /* rosy */
+    --success:#66bb6a;
+    --warning:#ffd54f;
+    --danger:#ef5350;
+    /* High-contrast tiles and grid */
+    --tile-base:#0d1117;
+    --tile-path:#ffd54f; /* amber path for clarity */
+    --tile-spot:#1565c0; /* strong blue for buildable */
+    --grid-border:rgba(255,255,255,0.45);
 }
 :root{
-    --bg-0:#0f0f1e; 
-    --panel:#181828;
-    --text:#e8f6ff;
-    --primary:#00fff7;
-    --accent:#ff00ea;
-    --success:#00ff90;
-    --warning:#ffea00;
-    --danger:#ff0033;
-    --border:rgba(0,255,247,0.35);
+    /* Cyber-defense palette: deep navy base, neon cyan primary, magenta accent */
+    --bg-0:#0a0b14; 
+    --panel:#121425;
+    --text:#e6f7ff;
+    --primary:#00e5ff;
+    --accent:#ff2bd6;
+    --success:#19f7a1;
+    --warning:#ffd166;
+    --danger:#ff3864;
+    --border:rgba(0,229,255,0.35);
+    /* Tile variables */
+    --tile-base:#101826;
+    --tile-path:#0ea5b7;
+    --tile-spot:#1b2540;
+    --grid-border:rgba(0,229,255,0.28);
     --radius-s:6px; --radius-m:10px; --radius-l:16px;
     --shadow-1:0 0 8px var(--primary);
     --shadow-2:0 0 16px var(--primary), 0 0 4px var(--accent);
@@ -259,24 +271,22 @@ tr{
     z-index: 2;
 }
 td{
-    background-color: #1a1a3a; /* Darker base for cells */
+    background-color: var(--tile-base); /* Deep navy cell base */
     height: 64px;
     width: 64px;
     z-index: 3;
     border-radius: 5px;
-    border: 1.5px solid #009999; /* Slightly softer, darker cyan for grid lines */
+    border: 1.5px solid var(--grid-border); /* Subtle cyan/white grid lines */
     transition: box-shadow 0.2s, background-color 0.2s;
     position: relative;
 }
 .path{
-    background-color: #cc00aa; /* Darker, less saturated pink */
-    background-image: url("enemypath.jpg"); /* Keep texture if desired */
-    box-shadow: 0 0 6px #cc00aa; /* Match new color */
+    background-color: var(--tile-path); /* Path color */
+    box-shadow: 0 0 6px var(--primary); /* Glow tied to primary */
 }
 .possibleTowerSpot{
-    background-color: #0022cc; /* Darker, less saturated blue */
-    background-image: url("blue_background.jpg"); /* Keep texture if desired */
-    box-shadow: 0 0 6px #0055ff; /* Adjusted glow */
+    background-color: var(--tile-spot); /* Buildable tiles */
+    box-shadow: 0 0 6px var(--primary); /* Cyan hint */
 }
 #startButton{
     display: block;
@@ -292,12 +302,12 @@ td{
 #stats{
     display: flex;
     flex-basis: 100%;
-    background: linear-gradient(90deg, #00fff7 0%, #ff00ea 100%);
+    background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
     justify-content: space-around;
     align-items: center;
     border-radius: 10px;
     margin-bottom: 18px;
-    box-shadow: 0 0 12px #00fff7, 0 0 4px #ff00ea;
+    box-shadow: 0 0 12px var(--primary), 0 0 4px var(--accent);
     padding: 12px 20px;
     width: 100%;
     box-sizing: border-box;
@@ -418,7 +428,6 @@ td{
 }
 .highlightCircle{
     background-color: whitesmoke;
-    background-image: url("highlightCircle.jpg");
     box-shadow: 0 0 16px #fff;
 }
 #towerSeletionMenu{
